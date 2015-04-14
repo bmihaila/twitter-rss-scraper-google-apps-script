@@ -162,13 +162,13 @@ function extractTweets(tweets, max) {
       var tweetLinks = body.p.a;
       if (tweetLinks) {
         for (j = 0; j < tweetLinks.length; j++) {
-          var link = '<a href="#">UNDEFINED LINK TYPE!</a> ';
+          var link = ' <a href="#">UNDEFINED LINK TYPE!</a> ';
           if (tweetLinks[j].class.indexOf("twitter-timeline-link") > -1) {
-            link = '<a href="' + tweetLinks[j].href + '">' + tweetLinks[j].content + '</a> ';
+            link = ' <a href="' + tweetLinks[j].href + '">' + tweetLinks[j].content + '</a> ';
           } else if (tweetLinks[j].class.indexOf('twitter-hashtag') > -1) {
-            link = '<a href="https://twitter.com/' + tweetLinks[j].href + '">#' + tweetLinks[j].b + '</a> ';
+            link = ' <a href="https://twitter.com/' + tweetLinks[j].href + '">#' + tweetLinks[j].b + '</a> ';
           } else if (tweetLinks[j].class.indexOf('twitter-atreply') > -1) {
-            link = '<a href="https://twitter.com' + tweetLinks[j].href + '">@' + tweetLinks[j].b + '</a> ';
+            link = ' <a href="https://twitter.com' + tweetLinks[j].href + '">@' + tweetLinks[j].b + '</a> ';
           }
           // TODO: two whitespaces is not always working. But do not know of a
           // better heuristic where to insert the tweets.
