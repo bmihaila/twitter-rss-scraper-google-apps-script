@@ -75,8 +75,9 @@ The example below shows the parameter:
 ## How to update
 
 You already installed the script (see above for instructions) and would want to update it to a newer version from this repository 
-that e.g. contains some bugfixes.  
-Login to [http://script.google.com/](http://script.google.com/), go to "start scripting" and choose the Project in the list of recent projects
+that e.g. contains some bugfixes. To update the script you cannot use the copy link as described above in **Setup** as that would create a new project
+and result in a different public URL for your Feeds. Hence the way to update is to login to 
+[http://script.google.com/](http://script.google.com/), go to "Start scripting" and choose the Project in the list of recent projects
 or by choosing "File -> Open" from the menu. Select the code in the script file and delete it. Then copy & paste the content from the 
 [main-script.js](https://github.com/bmihaila/twitter-rss-scraper-google-apps-script/blob/master/main-script.js) file in this repository into the code editor.
 Save the file and create a new project version by clicking "File -> Manage Versions" from the menu. That is, you enter a description for the new version
