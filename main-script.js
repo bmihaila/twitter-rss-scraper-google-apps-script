@@ -164,7 +164,12 @@ function extractTweets(tweets, max) {
         for (j = 0; j < tweetLinks.length; j++) {
           var link = ' <a href="#">UNDEFINED LINK TYPE!</a> ';
           if (tweetLinks[j].class.indexOf("twitter-timeline-link") > -1) {
-            link = ' <a href="' + tweetLinks[j].href + '">' + tweetLinks[j].content + '</a> ';
+            var linkText = ' "LINK PARSE ERROR" ';
+            if (tweetLinks[j].title)
+                linkText = tweetLinks[j].title;
+            else if (tweetLinks[j].content)
+                linkText = tweetLinks[j].content;
+            link = ' <a href="' + tweetLinks[j].href + '">' + linkText + '</a> ';
           } else if (tweetLinks[j].class.indexOf('twitter-hashtag') > -1) {
             link = ' <a href="https://twitter.com/' + tweetLinks[j].href + '">#' + tweetLinks[j].b + '</a> ';
           } else if (tweetLinks[j].class.indexOf('twitter-atreply') > -1) {
