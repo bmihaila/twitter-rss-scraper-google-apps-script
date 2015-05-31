@@ -72,7 +72,7 @@ function tweetsFor(user, include_replies, tweets_count) {
     Logger.log("Couldn't retrieve anything from Twitter for " + user);
     return;
   }
-  var tweets = extractTweets(data.query.results, tweets_count);
+  var tweets = extractTweets(data.query.results);
   return tweets;
 }
 
@@ -127,13 +127,18 @@ function makeRSS(user, include_replies, tweets) {
   return rss;
 }
 
-function extractTweets(tweets, max) {
+function extractTweets(tweets) {
   var toReturn = [];
-  for (i = 0; i < max; i++) {
+  var i = 0;
+  for (i = 0; i < tweets.li.length; i++) {
     if (tweets.li[i]) {
       var tweet = tweets.li[i].div;
-      if (!tweet)
+      if (!tweet && tweets.li[i].ol) // conversation retweet style
+        tweet = tweets.li[i].ol.li.div;
+      if (!tweet) {
+        Logger.log("Could not extract a tweet from:\n" + tweets.li[i]);
         continue; // no tweet but probably a list of followers
+      }
 
       var authorFullName = tweet["data-name"];
       var authorTwitterName = '@' + tweet["data-screen-name"].replace(/\s+/, '');
