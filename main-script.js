@@ -207,8 +207,7 @@ function extractTweets(jsonTweets, xmlTweets) {
         tweetXML = tweetRegex.exec(xmlTweets);
         if (tweetXML !== null)
           tweetXML = tweetXML[1];
-        var tweetContentRegex = '';
-        tweetContentRegex = RegExp(/<p\s+class=\".*?js-tweet-text.*?\"[^>]*>(.*?)<\/p>/ig);
+        var tweetContentRegex = RegExp(/<p\s+class=".*?js-tweet-text.*?"[^>]*?>(.*?)<\/p>/i);
         tweetContentXML = tweetContentRegex.exec(tweetXML);
         if (tweetContentXML !== null)
           tweetContentXML = tweetContentXML[1];
