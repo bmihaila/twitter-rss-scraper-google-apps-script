@@ -129,7 +129,6 @@ function makeRSS(user, include_replies, tweets) {
 
 function extractTweets(tweets) {
   var toReturn = [];
-  var i = 0;
   for (i = 0; i < tweets.li.length; i++) {
     if (tweets.li[i]) {
       var tweet = tweets.li[i].div;
@@ -144,12 +143,17 @@ function extractTweets(tweets) {
       var authorTwitterName = '@' + tweet["data-screen-name"].replace(/\s+/, '');
       var authorTwitterURL = "https://twitter.com/" + tweet["data-screen-name"].replace(/\s+/, '');
       var tweetURL = "https://twitter.com" + tweet["data-permalink-path"];
-      var tweetDate = '';
+      var tweetDate = '<unknown>';
 
       var body = tweet.div[1]; // class=content
       if (body.div[0]) { // class=stream-item-header
         // body.div[0].small.class=time
-        tweetDate = new Date(parseInt(body.div[0].small.a.span["data-time-ms"])).toUTCString();
+        
+        var timeElement = [].concat(body.div[0].small.a.span); // span element may be an array or not. Make sure it is always one.
+        if (!timeElement[0])
+          Logger.log("Could not extract time from tweet:\n" + body);
+        
+        tweetDate = new Date(parseInt(timeElement[0]["data-time-ms"])).toUTCString();
       }
 
       var tweetHTML = '';
@@ -160,8 +164,8 @@ function extractTweets(tweets) {
         tweetHTML = body.p[1].content;
       }
 
-      var tweetLinks = body.p.a;
-      if (tweetLinks) {
+      if (body.p.a) {
+        var tweetLinks = [].concat(body.p.a); // links element may be an array or not. Make sure it is always one.
         for (j = 0; j < tweetLinks.length; j++) {
           var link = ' <a href="#">UNDEFINED LINK TYPE!</a> ';
           if (tweetLinks[j].class.indexOf("twitter-timeline-link") > -1) {
@@ -170,15 +174,21 @@ function extractTweets(tweets) {
               linkText = tweetLinks[j].title;
             else if (tweetLinks[j].content)
               linkText = tweetLinks[j].content;
-            link = ' <a href="' + tweetLinks[j].href + '">' + linkText + '</a> ';
+            link = '<a href="' + tweetLinks[j].href + '">' + linkText + '</a>';
           } else if (tweetLinks[j].class.indexOf('twitter-hashtag') > -1) {
-            link = ' <a href="https://twitter.com/' + tweetLinks[j].href + '">#' + tweetLinks[j].b + '</a> ';
+            link = '<a href="https://twitter.com/' + tweetLinks[j].href + '">#' + tweetLinks[j].b + '</a>';
           } else if (tweetLinks[j].class.indexOf('twitter-atreply') > -1) {
-            link = ' <a href="https://twitter.com' + tweetLinks[j].href + '">@' + tweetLinks[j].b + '</a> ';
+            link = '<a href="https://twitter.com' + tweetLinks[j].href + '">@' + tweetLinks[j].b + '</a>';
           }
-          // TODO: two whitespaces is not always working. But do not know of a
-          // better heuristic where to insert the tweets.
-          tweetHTML = tweetHTML.replace(/\s{2}/, link);
+          // Uses some heuristics where to insert the links into the tweet text. 
+          // Failing often but that is as good as it gets when not knowing the location of the link in the text.
+          var linkInserted = '';
+          linkInserted = tweetHTML.replace(/^\s+/, link + " "); // try inserting the link at the beginning of the tweet
+          if (linkInserted === tweetHTML) 
+            linkInserted = tweetHTML.replace(/\s{2}/, " " + link + " "); // try to insert link at two whitespace characters (assuming one before and one after the link)
+          if (linkInserted === tweetHTML)
+            linkInserted = tweetHTML.replace(/\s+$/, " " + link); // try inserting the link at the end of the tweet
+          tweetHTML = linkInserted;
         }
       }
       toReturn[i] = {
