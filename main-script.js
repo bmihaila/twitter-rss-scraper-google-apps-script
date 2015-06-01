@@ -198,7 +198,11 @@ function extractTweets(jsonTweets, xmlTweets) {
         // first extract the tweet content from the XML/HTML text using regexes to know where to place the links
         
         // Reminder: the *? syntax applies non-greedy capturing
-        var tweetRegex = RegExp('<li[^>]*>(.*?data-tweet-id="' + tweetID + '".*?)</li>', 'i');
+        // below is not working as the non-greedy '.*?' still captures more tweets before capturing the one with the right 'data-tweet-id'
+//        var tweetRegex = RegExp('<li class="js-stream-item [^>]*?>(.*?data-tweet-id="' + tweetID + '".*?)</li>.*?data-tweet-id', 'i');
+        // thus we use the negative look-around to state that we want the first 'data-tweet-id' after the opening 'li' that matches the id number
+        // see http://stackoverflow.com/questions/406230/regular-expression-to-match-text-that-doesnt-contain-a-word for the syntax to forbid strings in matches
+        var tweetRegex = RegExp('<li class="js-stream-item [^>]*?>(((?!data-tweet-id).)*?data-tweet-id="' + tweetID + '.*?)</li>', 'i');
         var tweetXML = '';
         tweetXML = tweetRegex.exec(xmlTweets);
         if (tweetXML !== null)
