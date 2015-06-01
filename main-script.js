@@ -19,7 +19,7 @@ function testMain() {
   var e = {};
   e.parameter = {};
   e.parameter.user = "twitter";
-  // e.parameter.replies = "on";
+  e.parameter.replies = "on";
   // e.parameter.tweetscount = "100";
   doGet(e);
 }
@@ -191,7 +191,8 @@ function extractTweets(jsonTweets, xmlTweets) {
         // newer style commented re-tweet
         tweetHTML = body.p[1].content;
       }
-
+      
+      var tweetContentXML = '';
       // if there are links in the tweet then we need to reinsert them as they were extracted as separate JSON elements 
       if (body.p.a) {
         // first extract the tweet content from the XML/HTML text using regexes to know where to place the links
@@ -204,7 +205,6 @@ function extractTweets(jsonTweets, xmlTweets) {
           tweetXML = tweetXML[1];
         var tweetContentRegex = '';
         tweetContentRegex = RegExp(/<p\s+class=\".*?js-tweet-text.*?\"[^>]*>(.*?)<\/p>/ig);
-        var tweetContentXML = '';
         tweetContentXML = tweetContentRegex.exec(tweetXML);
         if (tweetContentXML !== null)
           tweetContentXML = tweetContentXML[1];
@@ -229,7 +229,7 @@ function extractTweets(jsonTweets, xmlTweets) {
             tweetContentXML = tweetContentXML.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, ' ' + link + ' '); // whitespace required due to the removal of whitespace in the compact XML printer
         }
       }
-      if (tweetContentXML !== null)
+      if (tweetContentXML)
         tweetHTML = tweetContentXML.trim();
       
       toReturn[i] = {
