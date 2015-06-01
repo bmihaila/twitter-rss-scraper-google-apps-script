@@ -19,7 +19,7 @@ function testMain() {
   var e = {};
   e.parameter = {};
   e.parameter.user = "twitter";
-  e.parameter.replies = "on";
+  // e.parameter.replies = "on";
   // e.parameter.tweetscount = "100";
   doGet(e);
 }
@@ -51,7 +51,10 @@ function tweetsFor(user, include_replies, tweets_count) {
   if (include_replies)
     with_replies = 'with_replies';
   var parsedText;
-  var yql = "http://query.yahooapis.com/v1/public/yql?q=SELECT%20*%20FROM%20html%20WHERE%20url%3D%22https%3A%2F%2Ftwitter.com%2F"
+  // The Yahoo YQL API is limited at 2000 queries per hour per IP for public requests. Upping this to 20k request would require an account and authentification using OAuth.
+  // See https://developer.yahoo.com/yql/guide/overview.html#usage-information-and-limits
+  // As each request is for querying a Twitter feed the public limit should be ok for most private/single user usages.
+  var yqlJSON = "http://query.yahooapis.com/v1/public/yql?q=SELECT%20*%20FROM%20html%20WHERE%20url%3D%22https%3A%2F%2Ftwitter.com%2F"
           + user
           + "%2F"
           + with_replies
@@ -62,9 +65,9 @@ function tweetsFor(user, include_replies, tweets_count) {
   var options = {
     "method": "get"
   };
-  var result = UrlFetchApp.fetch(yql, options);
+  var result = UrlFetchApp.fetch(yqlJSON, options);
   if (result.getResponseCode() != 200) {
-    Logger.log("Problems running query" + result.getResponseCode());
+    Logger.log("Problems running query " + result.getResponseCode());
     return;
   }
   var data = JSON.parse(result.getContentText());
@@ -72,7 +75,30 @@ function tweetsFor(user, include_replies, tweets_count) {
     Logger.log("Couldn't retrieve anything from Twitter for " + user);
     return;
   }
-  var tweets = extractTweets(data.query.results);
+  var jsonTweets = data.query.results;
+
+  // NOTE: as we fetch again the site, we might get an updated site, i.e. other tweets.
+  // However, as this is only used to find the right places to insert the links into the tweet text a missing tweet due to the timing differences is ok.
+  // TODO: a better method would be to retrieve the XML and then transform that to JSON but that is not possible afaik without using an external library
+  var yqlXML = yqlJSON.replace(/format=json/, "format=xml");
+  result = UrlFetchApp.fetch(yqlXML, options);
+  if (result.getResponseCode() != 200) {
+    Logger.log("Problems running query " + result.getResponseCode());
+    return;
+  }
+
+//  var xmlTweets = result.getContentText();
+  // parsing and outputting the text again gets us some pretty-printing of the html/xml, which is good for debugging but can be skipped otherwise for performance.
+  var xmlDocument = XmlService.parse(result.getContentText());
+  // Need to remove all newlines from the XML to be able to use the dot "." in capturing groups
+  var xmlTweets = XmlService.getCompactFormat().format(xmlDocument);
+  // using the above compact formatter seems to be twice as fast than using a regex to remove the newlines!! However, it is still up to 4x slower than without it.
+  // One drawback is that also whitespaces between xml elements (e.g. <a> links) are removed and thus have to be reinserted below when inserting links
+//  var xmlTweets = XmlService.getPrettyFormat().format(xmlDocument);
+//  xmlTweets  = xmlTweets.replace(/(\r\n|\n|\r)/g, ' ');
+//  xmlTweets  = xmlTweets.replace(/\s+/g, ' ');
+  
+  var tweets = extractTweets(jsonTweets, xmlTweets);
   return tweets;
 }
 
@@ -127,15 +153,16 @@ function makeRSS(user, include_replies, tweets) {
   return rss;
 }
 
-function extractTweets(tweets) {
+function extractTweets(jsonTweets, xmlTweets) {
   var toReturn = [];
-  for (i = 0; i < tweets.li.length; i++) {
-    if (tweets.li[i]) {
-      var tweet = tweets.li[i].div;
-      if (!tweet && tweets.li[i].ol) // conversation retweet style
-        tweet = tweets.li[i].ol.li.div;
-      if (!tweet) {
-        Logger.log("Could not extract a tweet from:\n" + tweets.li[i]);
+    var i = 0;
+  for (i = 0; i < jsonTweets.li.length; i++) {
+    if (jsonTweets.li[i]) {
+      var tweet = jsonTweets.li[i].div;
+      if (!tweet && jsonTweets.li[i].ol) // conversation retweet style
+        tweet = jsonTweets.li[i].ol.li.div;
+      if (!tweet || tweet.class.indexOf("js-stream-tweet") < 0) {
+        Logger.log("Could not extract a tweet from:\n" + jsonTweets.li[i]);
         continue; // no tweet but probably a list of followers
       }
 
@@ -144,6 +171,7 @@ function extractTweets(tweets) {
       var authorTwitterURL = "https://twitter.com/" + tweet["data-screen-name"].replace(/\s+/, '');
       var tweetURL = "https://twitter.com" + tweet["data-permalink-path"];
       var tweetDate = '<unknown>';
+      var tweetID = tweet["data-tweet-id"];
 
       var body = tweet.div[1]; // class=content
       if (body.div[0]) { // class=stream-item-header
@@ -164,7 +192,24 @@ function extractTweets(tweets) {
         tweetHTML = body.p[1].content;
       }
 
+      // if there are links in the tweet then we need to reinsert them as they were extracted as separate JSON elements 
       if (body.p.a) {
+        // first extract the tweet content from the XML/HTML text using regexes to know where to place the links
+        
+        // Reminder: the *? syntax applies non-greedy capturing
+        var tweetRegex = RegExp('<li[^>]*>(.*?data-tweet-id="' + tweetID + '".*?)</li>', 'i');
+        var tweetXML = '';
+        tweetXML = tweetRegex.exec(xmlTweets);
+        if (tweetXML !== null)
+          tweetXML = tweetXML[1];
+        var tweetContentRegex = '';
+        tweetContentRegex = RegExp(/<p\s+class=\".*?js-tweet-text.*?\"[^>]*>(.*?)<\/p>/ig);
+        var tweetContentXML = '';
+        tweetContentXML = tweetContentRegex.exec(tweetXML);
+        if (tweetContentXML !== null)
+          tweetContentXML = tweetContentXML[1];
+
+        
         var tweetLinks = [].concat(body.p.a); // links element may be an array or not. Make sure it is always one.
         for (j = 0; j < tweetLinks.length; j++) {
           var link = ' <a href="#">UNDEFINED LINK TYPE!</a> ';
@@ -180,17 +225,13 @@ function extractTweets(tweets) {
           } else if (tweetLinks[j].class.indexOf('twitter-atreply') > -1) {
             link = '<a href="https://twitter.com' + tweetLinks[j].href + '">@' + tweetLinks[j].b + '</a>';
           }
-          // Uses some heuristics where to insert the links into the tweet text. 
-          // Failing often but that is as good as it gets when not knowing the location of the link in the text.
-          var linkInserted = '';
-          linkInserted = tweetHTML.replace(/^\s+/, link + " "); // try inserting the link at the beginning of the tweet
-          if (linkInserted === tweetHTML) 
-            linkInserted = tweetHTML.replace(/\s{2}/, " " + link + " "); // try to insert link at two whitespace characters (assuming one before and one after the link)
-          if (linkInserted === tweetHTML)
-            linkInserted = tweetHTML.replace(/\s+$/, " " + link); // try inserting the link at the end of the tweet
-          tweetHTML = linkInserted;
+          if (tweetContentXML !== null)
+            tweetContentXML = tweetContentXML.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, ' ' + link + ' '); // whitespace required due to the removal of whitespace in the compact XML printer
         }
       }
+      if (tweetContentXML !== null)
+        tweetHTML = tweetContentXML.trim();
+      
       toReturn[i] = {
         'authorFullName': authorFullName,
         'authorTwitterName': authorTwitterName,
