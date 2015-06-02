@@ -54,16 +54,14 @@ function tweetsFor(user, include_replies, tweets_count) {
   // The Yahoo YQL API is limited at 2000 queries per hour per IP for public requests. Upping this to 20k request would require an account and authentification using OAuth.
   // See https://developer.yahoo.com/yql/guide/overview.html#usage-information-and-limits
   // As each request is for querying a Twitter feed the public limit should be ok for most private/single user usages.
-  var yqlJSON = "http://query.yahooapis.com/v1/public/yql?q=SELECT%20*%20FROM%20html%20WHERE%20url%3D%22https%3A%2F%2Ftwitter.com%2F"
-          + user
-          + "%2F"
-          + with_replies
-          + "?count="
-          + tweets_count
-          + "%22%20AND%20xpath%3D%22%2F%2Fli%5Bcontains(%40class%2C'js-stream-item')%5D%22&format=json"
+  var yqlJSON = 'http://query.yahooapis.com/v1/public/yql?format=json&q=' 
+          + encodeURIComponent('SELECT * FROM html WHERE '
+          + 'url="https://twitter.com/' + user + '/' + with_replies + '?count=' + tweets_count + '"'
+          + ' AND xpath="//li[contains(@class, \'js-stream-item\')]"');
 
   var options = {
-    "method": "get"
+    "method": "get",
+    "escaping" : false // we use the escaping method above
   };
   var result = UrlFetchApp.fetch(yqlJSON, options);
   if (result.getResponseCode() != 200) {
@@ -88,15 +86,15 @@ function tweetsFor(user, include_replies, tweets_count) {
   }
 
 //  var xmlTweets = result.getContentText();
-  // parsing and outputting the text again gets us some pretty-printing of the html/xml, which is good for debugging but can be skipped otherwise for performance.
-  var xmlDocument = XmlService.parse(result.getContentText());
   // Need to remove all newlines from the XML to be able to use the dot "." in capturing groups
-  var xmlTweets = XmlService.getCompactFormat().format(xmlDocument);
-  // using the above compact formatter seems to be twice as fast than using a regex to remove the newlines!! However, it is still up to 4x slower than without it.
-  // One drawback is that also whitespaces between xml elements (e.g. <a> links) are removed and thus have to be reinserted below when inserting links
-//  var xmlTweets = XmlService.getPrettyFormat().format(xmlDocument);
 //  xmlTweets  = xmlTweets.replace(/(\r\n|\n|\r)/g, ' ');
 //  xmlTweets  = xmlTweets.replace(/\s+/g, ' ');
+  // parsing and outputting the text again gets us some pretty-printing of the html/xml, which is good for debugging but can be skipped otherwise for performance.
+  var xmlDocument = XmlService.parse(result.getContentText());
+//  var xmlTweets = XmlService.getCompactFormat().format(xmlDocument);
+  // Using the above compact formatter seems to be twice as fast than using a regex to remove the newlines!! However, it is still up to 4x slower than without it.
+  // One drawback is that also whitespaces between xml elements (e.g. <a> links) are removed and thus have to be reinserted below when inserting links, so we use the solution below
+  var xmlTweets = XmlService.getPrettyFormat().setLineSeparator(' ').format(xmlDocument);
   
   var tweets = extractTweets(jsonTweets, xmlTweets);
   return tweets;
@@ -155,7 +153,7 @@ function makeRSS(user, include_replies, tweets) {
 
 function extractTweets(jsonTweets, xmlTweets) {
   var toReturn = [];
-    var i = 0;
+  var i = 0;
   for (i = 0; i < jsonTweets.li.length; i++) {
     if (jsonTweets.li[i]) {
       var tweet = jsonTweets.li[i].div;
@@ -229,7 +227,7 @@ function extractTweets(jsonTweets, xmlTweets) {
             link = '<a href="https://twitter.com' + tweetLinks[j].href + '">@' + tweetLinks[j].b + '</a>';
           }
           if (tweetContentXML !== null)
-            tweetContentXML = tweetContentXML.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, ' ' + link + ' '); // whitespace required due to the removal of whitespace in the compact XML printer
+            tweetContentXML = tweetContentXML.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, link); // reinserting whitespace required due to the removal in the compact XML printer
         }
       }
       if (tweetContentXML)
