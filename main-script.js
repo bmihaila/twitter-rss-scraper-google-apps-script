@@ -18,7 +18,7 @@
 function testMain() {
   var e = {};
   e.parameter = {};
-  e.parameter.user = "twitter";
+  e.parameter.user = "anoage";
   e.parameter.replies = "on";
   // e.parameter.tweetscount = "100";
   doGet(e);
@@ -100,20 +100,6 @@ function tweetsFor(user, include_replies, tweets_count) {
   return tweets;
 }
 
-// obsolete and unused. Remove if no usage is found.
-function makeHTML(user, tweets) {
-  html = "<h2>Twitter feed for " + user + "</h2>\n" + "<ul>";
-  for (i = 0; i < tweets.length; i++) {
-    t = tweets[i];
-    if (!t)
-      continue;
-    html += "\n\t<li>\n\t\t<blockquote>" + t.tweetHTML + "</blockquote>\n\t\t<p>Posted: " + t.tweetDate
-            + ' by <a href="' + t.authorTwitterURL + '">' + t.authorTwitterName + ' (' + t.authorFullName
-            + ')</a> | <a href="' + t.tweetURL + '">Original Tweet</a>\n\t</li>\n'
-  }
-  return html + "</ul>"
-}
-
 function makeRSS(user, include_replies, tweets) {
   var with_replies = '';
   if (include_replies)
@@ -173,26 +159,30 @@ function extractTweets(jsonTweets, xmlTweets) {
 
       var body = tweet.div[1]; // class=content
       if (body.div[0]) { // class=stream-item-header
-        // body.div[0].small.class=time
-        
         var timeElement = [].concat(body.div[0].small.a.span); // span element may be an array or not. Make sure it is always one.
-        if (!timeElement[0])
+        // body.div[0].small.class=time
+        if (timeElement[0]) {
+          tweetDate = new Date(parseInt(timeElement[0]["data-time-ms"])).toUTCString();
+        } else {
           Logger.log("Could not extract time from tweet:\n" + body);
-        
-        tweetDate = new Date(parseInt(timeElement[0]["data-time-ms"])).toUTCString();
+          tweetDate = new Date();
+        }
       }
 
       var tweetHTML = '';
+      var tweetLinks = [];
       if (body.p.content) {
         tweetHTML = body.p.content;
+        tweetLinks = tweetLinks.concat(body.p.a);  // links element may be an array or not. Make sure it is always one.
       } else if (body.p[1] && body.p[1].content) {
         // newer style commented re-tweet
         tweetHTML = body.p[1].content;
+        tweetLinks = tweetLinks.concat(body.p[1].a);  // links element may be an array or not. Make sure it is always one.
       }
       
       var tweetContentXML = '';
       // if there are links in the tweet then we need to reinsert them as they were extracted as separate JSON elements 
-      if (body.p.a) {
+      if (tweetLinks.length > 0 && tweetLinks[0]) {
         // first extract the tweet content from the XML/HTML text using regexes to know where to place the links
         
         // Reminder: the *? syntax applies non-greedy capturing
@@ -203,35 +193,34 @@ function extractTweets(jsonTweets, xmlTweets) {
         var tweetRegex = RegExp('<li class="js-stream-item [^>]*?>(((?!data-tweet-id).)*?data-tweet-id="' + tweetID + '.*?)</li>', 'i');
         var tweetXML = '';
         tweetXML = tweetRegex.exec(xmlTweets);
-        if (tweetXML !== null)
+        if (tweetXML)
           tweetXML = tweetXML[1];
         var tweetContentRegex = RegExp(/<p\s+class=".*?js-tweet-text.*?"[^>]*?>(.*?)<\/p>/i);
         tweetContentXML = tweetContentRegex.exec(tweetXML);
-        if (tweetContentXML !== null)
+        if (tweetContentXML) {
           tweetContentXML = tweetContentXML[1];
-
         
-        var tweetLinks = [].concat(body.p.a); // links element may be an array or not. Make sure it is always one.
-        for (j = 0; j < tweetLinks.length; j++) {
-          var link = ' <a href="#">UNDEFINED LINK TYPE!</a> ';
-          if (tweetLinks[j].class.indexOf("twitter-timeline-link") > -1) {
-            var linkText = ' "LINK PARSE ERROR" ';
-            if (tweetLinks[j].title)
-              linkText = tweetLinks[j].title;
-            else if (tweetLinks[j].content)
-              linkText = tweetLinks[j].content;
-            link = '<a href="' + tweetLinks[j].href + '">' + linkText + '</a>';
-          } else if (tweetLinks[j].class.indexOf('twitter-hashtag') > -1) {
-            link = '<a href="https://twitter.com/' + tweetLinks[j].href + '">#' + tweetLinks[j].b + '</a>';
-          } else if (tweetLinks[j].class.indexOf('twitter-atreply') > -1) {
-            link = '<a href="https://twitter.com' + tweetLinks[j].href + '">@' + tweetLinks[j].b + '</a>';
+          for (j = 0; j < tweetLinks.length; j++) {
+            var link = ' <a href="#">UNDEFINED LINK TYPE!</a> ';
+            if (tweetLinks[j].class.indexOf("twitter-timeline-link") > -1) {
+              var linkText = ' "LINK PARSE ERROR" ';
+              if (tweetLinks[j].title)
+                linkText = tweetLinks[j].title;
+              else if (tweetLinks[j].content)
+                linkText = tweetLinks[j].content;
+              link = '<a href="' + tweetLinks[j].href + '">' + linkText + '</a>';
+            } else if (tweetLinks[j].class.indexOf('twitter-hashtag') > -1) {
+              link = '<a href="https://twitter.com/' + tweetLinks[j].href + '">#' + tweetLinks[j].b + '</a>';
+            } else if (tweetLinks[j].class.indexOf('twitter-atreply') > -1) {
+              link = '<a href="https://twitter.com' + tweetLinks[j].href + '">@' + tweetLinks[j].b + '</a>';
+            }
+            tweetContentXML = tweetContentXML.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, link); // reinserting whitespace around link required if removed by the compact XML printer
           }
-          if (tweetContentXML !== null)
-            tweetContentXML = tweetContentXML.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, link); // reinserting whitespace required due to the removal in the compact XML printer
+          tweetHTML = tweetContentXML.trim();
+          // translate some escaped HTML entities to text which do not get translated back when parsing the XML for some reason, e.g. &#39;
+          tweetHTML = tweetHTML.replace(/&amp;#39;/ig, "'");
         }
       }
-      if (tweetContentXML)
-        tweetHTML = tweetContentXML.trim();
       
       toReturn[i] = {
         'authorFullName': authorFullName,
