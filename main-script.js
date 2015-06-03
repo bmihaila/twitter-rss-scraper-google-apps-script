@@ -18,7 +18,7 @@
 function testMain() {
   var e = {};
   e.parameter = {};
-  e.parameter.user = "anoage";
+  e.parameter.user = "twitter";
   e.parameter.replies = "on";
   // e.parameter.tweetscount = "100";
   doGet(e);
@@ -178,6 +178,10 @@ function extractTweets(jsonTweets, xmlTweets) {
         // newer style commented re-tweet
         tweetHTML = body.p[1].content;
         tweetLinks = tweetLinks.concat(body.p[1].a);  // links element may be an array or not. Make sure it is always one.
+      } else if (body.p.a) { // only links without other body
+        tweetLinks = tweetLinks.concat(body.p.a);  // links element may be an array or not. Make sure it is always one.
+      } else if (body.p[1] && body.p[1].a) {
+        tweetLinks = tweetLinks.concat(body.p[1].a);  // links element may be an array or not. Make sure it is always one.
       }
       
       var tweetContentXML = '';
@@ -201,18 +205,26 @@ function extractTweets(jsonTweets, xmlTweets) {
           tweetContentXML = tweetContentXML[1];
         
           for (j = 0; j < tweetLinks.length; j++) {
-            var link = ' <a href="#">UNDEFINED LINK TYPE!</a> ';
+            var href = '';
+            if (tweetLinks[j]["data-expanded-url"])
+              href = tweetLinks[j]["data-expanded-url"]; // prefer the real url than the url shortener reference
+            else
+              href = tweetLinks[j].href;
+
+            var link = ' <a href="">UNDEFINED LINK TYPE!</a> ';            
             if (tweetLinks[j].class.indexOf("twitter-timeline-link") > -1) {
               var linkText = ' "LINK PARSE ERROR" ';
-              if (tweetLinks[j].title)
+              if (tweetLinks[j].span && tweetLinks[j].span[2].class === 'js-display-url') // prefer the cutoff url with ellipsis to the complete url
+                linkText = tweetLinks[j].span[2].content + '…';
+              else if (tweetLinks[j].title)
                 linkText = tweetLinks[j].title;
               else if (tweetLinks[j].content)
                 linkText = tweetLinks[j].content;
-              link = '<a href="' + tweetLinks[j].href + '">' + linkText + '</a>';
+              link = '<a href="' + href + '">' + linkText + '</a>';
             } else if (tweetLinks[j].class.indexOf('twitter-hashtag') > -1) {
-              link = '<a href="https://twitter.com/' + tweetLinks[j].href + '">#' + tweetLinks[j].b + '</a>';
+              link = '<a href="https://twitter.com/' + href + '">#' + tweetLinks[j].b + '</a>';
             } else if (tweetLinks[j].class.indexOf('twitter-atreply') > -1) {
-              link = '<a href="https://twitter.com' + tweetLinks[j].href + '">@' + tweetLinks[j].b + '</a>';
+              link = '<a href="https://twitter.com' + href + '">@' + tweetLinks[j].b + '</a>';
             }
             tweetContentXML = tweetContentXML.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, link); // reinserting whitespace around link required if removed by the compact XML printer
           }
@@ -221,7 +233,7 @@ function extractTweets(jsonTweets, xmlTweets) {
           tweetHTML = tweetHTML.replace(/&amp;#39;/ig, "'");
         }
       }
-      
+       
       toReturn[i] = {
         'authorFullName': authorFullName,
         'authorTwitterName': authorTwitterName,
