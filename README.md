@@ -1,6 +1,6 @@
 # Twitter RSS Feeds Scraper - Google Apps Script
 
-A [Google Apps Script](http://script.google.com/) to scrape (parse) the Twitter Site and generate an RSS feed.
+A [Google Apps Script](https://script.google.com/) to scrape (parse) the Twitter Site and generate an RSS feed.
   
 After Twitter closed down its public RSS feed in Summer 2013 there emerged several solutions to generate
 RSS feeds by either using the Twitter API or scraping the Twitter Site (e.g. [RSS4Twittter](http://rss4twitter.appspot.com) 
@@ -13,7 +13,7 @@ the other full-blown server-side solutions, e.g. from this
 [Stack Exchange Discussion](http://webapps.stackexchange.com/questions/41499/any-alternatives-for-twitter-rss-after-native-service-is-shut-down).  
 
 For this project you only need a Google account to upload the code to
-[Google Apps Script](http://script.google.com/). After doing so you will be able to access your 
+[Google Apps Script](https://script.google.com/). After doing so you will be able to access your 
 RSS feeds through a public Google Apps URL and thus be able to add these feeds to your RSS Feed Reader.
 
 ## Features
@@ -29,7 +29,7 @@ The mentioned project also provides access to Twitter searches, favorites and li
 ## How to install
 
 ### Requirements
-You need to have a Google account (Gmail etc.) to be able to login to [Google Apps Script](http://script.google.com/).
+You need to have a Google account (Gmail etc.) to be able to login to [Google Apps Script](https://script.google.com/).
 
 ### 1. Install
 There are two possibilities to setup the project:
@@ -39,7 +39,7 @@ to create a new Google Apps project with the script code.
 
 or alternatively create a scripts project by hand:
 
-+ Login to [http://script.google.com/](http://script.google.com/), go to "Start scripting" and create a new "Blank Project". Delete any code in your new
++ Login to [https://script.google.com/](https://script.google.com/), go to "Start scripting" and create a new "Blank Project". Delete any code in your new
 project and copy & paste the content from the [main-script.js](https://github.com/bmihaila/twitter-rss-scraper-google-apps-script/blob/master/main-script.js)
 file in this repository into the code editor of your newly created Google Script project. Save the file and give the project a name (e.g. "Twitter-to-RSS").
 
@@ -77,7 +77,7 @@ The example below shows the parameter:
 You already installed the script (see above for instructions) and would want to update it to a newer version from this repository 
 that e.g. contains some bugfixes. To update the script you cannot use the copy link as described above in **Setup** as that would create a new project
 and result in a different public URL for your Feeds. Hence the way to update is to login to 
-[http://script.google.com/](http://script.google.com/), go to "Start scripting" and choose the Project in the list of recent projects
+[https://script.google.com/](https://script.google.com/), go to "Start scripting" and choose the Project in the list of recent projects
 or by choosing "File -> Open" from the menu. Select the code in the script file and delete it. Then copy & paste the content from the 
 [main-script.js](https://github.com/bmihaila/twitter-rss-scraper-google-apps-script/blob/master/main-script.js) file in this repository into the code editor.
 Save the file and create a new project version by clicking "File -> Manage Versions" from the menu. That is, you enter a description for the new version
