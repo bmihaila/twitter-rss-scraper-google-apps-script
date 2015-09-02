@@ -211,29 +211,30 @@ function extractTweets(jsonTweets, xmlTweets) {
             else
               href = tweetLinks[j].href;
 
-            var link = ' <a href="">UNDEFINED LINK TYPE!</a> ';            
-            if (tweetLinks[j].class.indexOf("twitter-timeline-link") > -1) {
+            var resultLink = ''
+            var currentLink = tweetLinks[j];
+            if (currentLink.class.indexOf("twitter-timeline-link") > -1) {
               var linkText = ' "LINK PARSE ERROR" ';
-              if (tweetLinks[j].span && tweetLinks[j].span[2].class === 'js-display-url') // prefer the cutoff url with ellipsis to the complete url
-                linkText = tweetLinks[j].span[2].content + '…';
-              else if (tweetLinks[j].title)
-                linkText = tweetLinks[j].title;
-              else if (tweetLinks[j].content)
-                linkText = tweetLinks[j].content;
-              link = '<a href="' + href + '">' + linkText + '</a>';
-            } else if (tweetLinks[j].class.indexOf('twitter-hashtag') > -1) {
-              link = '<a href="https://twitter.com/' + href + '">#' + tweetLinks[j].b + '</a>';
-            } else if (tweetLinks[j].class.indexOf('twitter-atreply') > -1) {
-              link = '<a href="https://twitter.com' + href + '">@' + tweetLinks[j].b + '</a>';
+              if (currentLink.span && currentLink.span[2].class === 'js-display-url') // prefer the cutoff url with ellipsis to the complete url
+                linkText = currentLink.span[2].content + '…';
+              else if (currentLink.title)
+                linkText = currentLink.title;
+              else if (currentLink.content)
+                linkText = currentLink.content;
+              resultLink = '<a href="' + href + '">' + linkText + '</a>';
+            } else if (/twitter-hashtag|twitter-cashtag|twitter-atreply/.test(currentLink.class)) {
+              resultLink = '<a href="https://twitter.com/' + href + '">' + currentLink.s + currentLink.b + '</a>';
+            } else {
+              resultLink = ' <a href="">UNDEFINED LINK TYPE!</a> ';
             }
-            tweetContentXML = tweetContentXML.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, link); // reinserting whitespace around link required if removed by the compact XML printer
+            tweetContentXML = tweetContentXML.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, resultLink); // reinserting whitespace around link required if removed by the compact XML printer
           }
           tweetHTML = tweetContentXML.trim();
           // translate some escaped HTML entities to text which do not get translated back when parsing the XML for some reason, e.g. &#39;
           tweetHTML = tweetHTML.replace(/&amp;#39;/ig, "'");
         }
       }
-       
+      
       toReturn[i] = {
         'authorFullName': authorFullName,
         'authorTwitterName': authorTwitterName,
