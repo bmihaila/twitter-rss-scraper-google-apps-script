@@ -38,7 +38,7 @@ function doGet(e) {
 
   var tweets = tweetsFor(user, include_replies, tweets_count);
   if (!tweets)
-    return ContentService.createTextOutput("Error: no tweets could be parsed!");
+    return ContentService.createTextOutput("Error: no tweets could be parsed!\n\nLog messages:\n" + Logger.getLog());
   var rss = makeRSS(user, include_replies, tweets);
   var output = ContentService.createTextOutput();
   output.setMimeType(ContentService.MimeType.RSS);
@@ -51,19 +51,18 @@ function tweetsFor(user, include_replies, tweets_count) {
   if (include_replies)
     with_replies = 'with_replies';
   var parsedText;
+  var twitterURL = 'https://twitter.com/' + user + '/' + with_replies + '?count=' + tweets_count;
   // The Yahoo YQL API is limited at 2000 queries per hour per IP for public requests. Upping this to 20k request would require an account and authentification using OAuth.
   // See https://developer.yahoo.com/yql/guide/overview.html#usage-information-and-limits
   // As each request is for querying a Twitter feed the public limit should be ok for most private/single user usages.
-  var yqlJSON = 'http://query.yahooapis.com/v1/public/yql?format=json&q=' 
-          + encodeURIComponent('SELECT * FROM html WHERE '
-          + 'url="https://twitter.com/' + user + '/' + with_replies + '?count=' + tweets_count + '"'
-          + ' AND xpath="//li[contains(@class, \'js-stream-item\')]"');
-
+  var yqlQueryUrlPart = 'SELECT * FROM html WHERE ' + 'url="' + twitterURL + '" AND xpath="//li[contains(@class, \'js-stream-item\')]"';
+  var yqlJSONQuery = 'http://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(yqlQueryUrlPart);  
+  
   var options = {
     "method": "get",
     "escaping" : false // we use the escaping method above
   };
-  var result = UrlFetchApp.fetch(yqlJSON, options);
+  var result = UrlFetchApp.fetch(yqlJSONQuery, options);
   if (result.getResponseCode() != 200) {
     Logger.log("Problems running query " + result.getResponseCode());
     return;
@@ -71,6 +70,7 @@ function tweetsFor(user, include_replies, tweets_count) {
   var data = JSON.parse(result.getContentText());
   if (null == data.query.results) {
     Logger.log("Couldn't retrieve anything from Twitter for " + user);
+    Logger.log("Yahoo query to retrieve the Twitter did not return any data. Below the response headers:\n" + JSON.stringify(result.getAllHeaders()));
     return;
   }
   var jsonTweets = data.query.results;
@@ -78,8 +78,8 @@ function tweetsFor(user, include_replies, tweets_count) {
   // NOTE: as we fetch again the site, we might get an updated site, i.e. other tweets.
   // However, as this is only used to find the right places to insert the links into the tweet text a missing tweet due to the timing differences is ok.
   // TODO: a better method would be to retrieve the XML and then transform that to JSON but that is not possible afaik without using an external library
-  var yqlXML = yqlJSON.replace(/format=json/, "format=xml");
-  result = UrlFetchApp.fetch(yqlXML, options);
+  var yqlXMLQuery = yqlJSONQuery.replace(/format=json/, "format=xml");
+  result = UrlFetchApp.fetch(yqlXMLQuery, options);
   if (result.getResponseCode() != 200) {
     Logger.log("Problems running query " + result.getResponseCode());
     return;
