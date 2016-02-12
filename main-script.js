@@ -172,7 +172,7 @@ function extractTweets(jsonTweets, xmlTweets) {
       var tweetHTML = '';
       var tweetLinks = [];
       var bodycontent = body.div[1]; // class=js-tweet-text-container
-      if (bodycontent.p.pcontent) {
+      if (bodycontent.p.content) {
         tweetHTML = bodycontent.p.content;
         tweetLinks = tweetLinks.concat(bodycontent.p.a);  // links element may be an array or not. Make sure it is always one.
       } else if (bodycontent.p[1] && bodycontent.p[1].content) {
