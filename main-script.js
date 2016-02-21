@@ -15,6 +15,11 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * To be used for testing and debugging. 
+ * Calls the main entry function with a set of example parameters
+ * to invoke a test run.
+ */
 function testMain() {
   var e = {};
   e.parameter = {};
@@ -24,6 +29,12 @@ function testMain() {
   doGet(e);
 }
 
+/**
+ * Main entry point in the Google Scripts framework.
+ * Is called for each request to the public URL of the script.
+ *
+ * @param {Object} e request object that exposes the parameters
+ */
 function doGet(e) {
   var user = e.parameter.user;
   if (!user)
@@ -46,6 +57,13 @@ function doGet(e) {
   return output;
 }
 
+/**
+ * Generate an array of tweets data for a user name.
+ * 
+ * @param {String} user The username to request the tweets for
+ * @param {Boolean} include_replies If to include the reply tweets from the user timeline   
+ * @param {Number} tweets_count How many tweets from the user timeline should be included 
+ */
 function tweetsFor(user, include_replies, tweets_count) {
   var with_replies = '';
   if (include_replies)
@@ -100,6 +118,13 @@ function tweetsFor(user, include_replies, tweets_count) {
   return tweets;
 }
 
+/**
+ * Assemble the RSS response from the tweets.
+ *
+ * @param {String} user The username to request the tweets for
+ * @param {Boolean} include_replies If to include the reply tweets from the user timeline   
+ * @param {Object} tweets The array of tweets, organized as a dictionary of keys and twitter data
+ */
 function makeRSS(user, include_replies, tweets) {
   var with_replies = '';
   if (include_replies)
@@ -131,19 +156,39 @@ function makeRSS(user, include_replies, tweets) {
     t = tweets[i];
     if (!t)
       continue;
-    rss += "<item>\n\t<title><![CDATA["
-    // Note: removed as no need for the author name to appear in the title.
-    // There is the author field for that!
-    // + t.authorTwitterName
-    // + ' '
-    + t.tweetHTML + "]]></title>\n\t<author><![CDATA[" + t.authorFullName + "]]></author>\n\t<description><![CDATA["
-            + t.tweetHTML + "]]></description>\n\t<pubDate>" + t.tweetDate + "</pubDate>\n\t<guid>" + t.tweetURL
-            + "</guid>\n\t<link>" + t.tweetURL + "</link>\n\t<twitter:source />\n\t<twitter:place />\n</item>\n";
+    rss += "<item>\n\t"
+            + "<title><![CDATA["
+            + t.tweetHTML 
+            + "]]></title>\n\t"
+            + "<author><![CDATA[" 
+            + t.authorFullName 
+            + "]]></author>\n\t"
+            + "<description><![CDATA["
+            + t.tweetHTML 
+            + "]]></description>\n\t"
+            + "<pubDate>" 
+            + t.tweetDate 
+            + "</pubDate>\n\t"
+            + "<guid>" 
+            + t.tweetURL
+            + "</guid>\n\t"
+            + "<link>" 
+            + t.tweetURL 
+            + "</link>\n\t"
+            + "<twitter:source />\n\t"
+            + "<twitter:place />\n"
+            + "</item>\n";
   }
   rss += "</channel>\n</rss>";
   return rss;
 }
 
+/**
+ * Parse the timeline into Twitter data and return it as an array of dictionaries.
+ *
+ * @param {Object} jsonTweets JSON object of the parsed HTML timeline page
+ * @param {Object} xmlTweets XML object of the parsed HTML timeline page
+ */
 function extractTweets(jsonTweets, xmlTweets) {
   var toReturn = [];
   var i = 0;
@@ -179,6 +224,7 @@ function extractTweets(jsonTweets, xmlTweets) {
       var tweetHTML = '';
       var tweetLinks = [];
       var bodycontent = body.div[1]; // class=js-tweet-text-container
+              
       if (bodycontent.p.content) {
         tweetHTML = bodycontent.p.content;
         tweetLinks = tweetLinks.concat(bodycontent.p.a);  // links element may be an array or not. Make sure it is always one.
@@ -186,10 +232,12 @@ function extractTweets(jsonTweets, xmlTweets) {
         // newer style commented re-tweet
         tweetHTML = bodycontent.p[1].content;
         tweetLinks = tweetLinks.concat(bodycontent.p[1].a);  // links element may be an array or not. Make sure it is always one.
+      } else if (bodycontent.p[1] && bodycontent.p[1].a) { // only links without other body
+        tweetLinks = tweetLinks.concat(bodycontent.p[1].a);  // links element may be an array or not. Make sure it is always one.
       } else if (bodycontent.p.a) { // only links without other body
         tweetLinks = tweetLinks.concat(bodycontent.p.a);  // links element may be an array or not. Make sure it is always one.
-      } else if (bodycontent.p[1] && bodycontent.p[1].a) {
-        tweetLinks = tweetLinks.concat(bodycontent.p[1].a);  // links element may be an array or not. Make sure it is always one.
+      } else {
+        Logger.log("Could not extract text from tweet:\n" + bodycontent);
       }
       
       var tweetContentXML = '';
@@ -249,8 +297,8 @@ function extractTweets(jsonTweets, xmlTweets) {
         'authorTwitterURL': authorTwitterURL,
         'tweetURL': tweetURL,
         'tweetDate': tweetDate,
-        'tweetHTML': tweetHTML,
-        'tweetLinks': tweetLinks
+        'tweetText' : '', // TODO: implement
+        'tweetHTML': tweetHTML
       }
     }
   }
