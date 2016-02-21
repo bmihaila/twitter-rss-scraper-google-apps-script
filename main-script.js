@@ -160,7 +160,7 @@ function makeRSS(user, include_replies, tweets) {
       continue;
     rss += "<item>\n\t"
             + "<title><![CDATA["
-            + t.tweetHTML 
+            + t.tweetText
             + "]]></title>\n\t"
             + "<author><![CDATA[" 
             + t.authorFullName 
@@ -244,7 +244,8 @@ function extractTweets(jsonTweets, xmlTweets) {
       }
       
       // the text title element may contain HTML so just copy the content
-      tweetText = tweetHtml;
+      if (tweetHTML)
+        tweetText = tweetHTML;
       
       var tweetContentXML = '';
       // if there are links in the tweet then we need to reinsert them as they were extracted as separate JSON elements 
@@ -265,14 +266,17 @@ function extractTweets(jsonTweets, xmlTweets) {
         tweetContentXML = tweetContentRegex.exec(tweetXML);
         if (tweetContentXML) {
           tweetContentXML = tweetContentXML[1];
-        
+          var tweetContentXMLforHTML = tweetContentXML;
+          var tweetContentXMLforPlainText = tweetContentXML;
+          
           for (j = 0; j < tweetLinks.length; j++) {
             var currentLink = tweetLinks[j];
             var href = currentLink["data-expanded-url"]; // prefer the real url than the url shortener reference
             if (!href)
               href = currentLink.href;
 
-            var resultLink = ''
+            var resultLinkHTML = ''
+            var resultLinkPlainText = ''
             if (currentLink.class.indexOf("twitter-timeline-link") > -1) {
               var linkText = ' "LINK PARSE ERROR" ';
               if (currentLink.span && currentLink.span[2].class === 'js-display-url') // prefer the cutoff url with ellipsis to the complete url
@@ -281,17 +285,24 @@ function extractTweets(jsonTweets, xmlTweets) {
                 linkText = currentLink.title;
               else if (currentLink.content)
                 linkText = currentLink.content;
-              resultLink = '<a href="' + href + '">' + linkText + '</a>';
+              resultLinkHTML = '<a href="' + href + '">' + linkText + '</a>';
+              resultLinkPlainText = ' →' + linkText + ' ';
             } else if (/twitter-hashtag|twitter-cashtag|twitter-atreply/.test(currentLink.class)) {
-              resultLink = '<a href="https://twitter.com/' + href + '">' + currentLink.s + currentLink.b + '</a>';
+              resultLinkHTML = '<a href="https://twitter.com/' + href + '">' + currentLink.s + currentLink.b + '</a>';
+              resultLinkPlainText = ' →' + currentLink.s + currentLink.b + ' ';
             } else {
-              resultLink = ' <a href="">UNDEFINED LINK TYPE!</a> ';
+              resultLinkHTML = ' <a href="">UNDEFINED LINK TYPE!</a> ';
+              resultLinkPlainText = ' →UNDEFINED LINK TYPE! ';
             }
-            tweetContentXML = tweetContentXML.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, resultLink); // NOTE: reinserting whitespace around link required if removed by the compact XML printer
+            // NOTE: reinserting whitespace around link required if removed by the compact XML printer
+            tweetContentXMLforHTML = tweetContentXMLforHTML.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, resultLinkHTML);
+            tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, resultLinkPlainText);
           }
-          tweetHTML = tweetContentXML.trim();
+          tweetHTML = tweetContentXMLforHTML.trim();
+          tweetText = tweetContentXMLforPlainText.trim();
           // translate some escaped HTML entities to text which do not get translated back when parsing the XML for some reason, e.g. &#39;
           tweetHTML = tweetHTML.replace(/&amp;#39;/ig, "'");
+          tweetText = tweetText.replace(/&amp;#39;/ig, "'");
         }
       }
       
