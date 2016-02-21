@@ -148,8 +148,10 @@ function makeRSS(user, include_replies, tweets) {
           + "<language>en-us</language>\n\t"
           + "<ttl>60</ttl>\n\n"  // one minute expiration time
           + "<image>\n\t"
-          + "<link>https://twitter.com/" + user
-          + "</link>\n\t<url>https://abs.twimg.com/favicons/favicon.ico</url>\n\t" 
+          + "<link>https://twitter.com/" 
+          + user
+          + "</link>\n\t"
+          + "<url>https://abs.twimg.com/favicons/favicon.ico</url>\n\t" 
           + "<title>Twitter</title>\n"
           + "</image>\n";
   for (i = 0; i < tweets.length; i++) {
@@ -170,7 +172,7 @@ function makeRSS(user, include_replies, tweets) {
             + t.tweetDate 
             + "</pubDate>\n\t"
             + "<guid>" 
-            + t.tweetURL
+            + t.tweetID
             + "</guid>\n\t"
             + "<link>" 
             + t.tweetURL 
@@ -221,6 +223,7 @@ function extractTweets(jsonTweets, xmlTweets) {
         }
       }
 
+      var tweetText = '';
       var tweetHTML = '';
       var tweetLinks = [];
       var bodycontent = body.div[1]; // class=js-tweet-text-container
@@ -239,6 +242,9 @@ function extractTweets(jsonTweets, xmlTweets) {
       } else {
         Logger.log("Could not extract text from tweet:\n" + bodycontent);
       }
+      
+      // the text title element may contain HTML so just copy the content
+      tweetText = tweetHtml;
       
       var tweetContentXML = '';
       // if there are links in the tweet then we need to reinsert them as they were extracted as separate JSON elements 
@@ -261,14 +267,12 @@ function extractTweets(jsonTweets, xmlTweets) {
           tweetContentXML = tweetContentXML[1];
         
           for (j = 0; j < tweetLinks.length; j++) {
-            var href = '';
-            if (tweetLinks[j]["data-expanded-url"])
-              href = tweetLinks[j]["data-expanded-url"]; // prefer the real url than the url shortener reference
-            else
-              href = tweetLinks[j].href;
+            var currentLink = tweetLinks[j];
+            var href = currentLink["data-expanded-url"]; // prefer the real url than the url shortener reference
+            if (!href)
+              href = currentLink.href;
 
             var resultLink = ''
-            var currentLink = tweetLinks[j];
             if (currentLink.class.indexOf("twitter-timeline-link") > -1) {
               var linkText = ' "LINK PARSE ERROR" ';
               if (currentLink.span && currentLink.span[2].class === 'js-display-url') // prefer the cutoff url with ellipsis to the complete url
@@ -283,7 +287,7 @@ function extractTweets(jsonTweets, xmlTweets) {
             } else {
               resultLink = ' <a href="">UNDEFINED LINK TYPE!</a> ';
             }
-            tweetContentXML = tweetContentXML.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, resultLink); // reinserting whitespace around link required if removed by the compact XML printer
+            tweetContentXML = tweetContentXML.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, resultLink); // NOTE: reinserting whitespace around link required if removed by the compact XML printer
           }
           tweetHTML = tweetContentXML.trim();
           // translate some escaped HTML entities to text which do not get translated back when parsing the XML for some reason, e.g. &#39;
@@ -296,8 +300,9 @@ function extractTweets(jsonTweets, xmlTweets) {
         'authorTwitterName': authorTwitterName,
         'authorTwitterURL': authorTwitterURL,
         'tweetURL': tweetURL,
+        'tweetID': tweetID,
         'tweetDate': tweetDate,
-        'tweetText' : '', // TODO: implement
+        'tweetText': tweetText,
         'tweetHTML': tweetHTML
       }
     }
