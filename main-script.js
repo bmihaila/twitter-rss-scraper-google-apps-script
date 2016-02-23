@@ -290,16 +290,16 @@ function extractTweets(jsonTweets, xmlTweets) {
           var tweetContentXMLforHTML = tweetContentXML;
           var tweetContentXMLforPlainText = tweetContentXML;
 
-          for (j = 0; j < tweetHashflags.length && tweetHashflags[j]; j++) {
+          for (j = 0; j < tweetHashflags.length; j++) {
             var currentHashflag = tweetHashflags[j];
             if (currentHashflag.class.indexOf("twitter-hashflag-container") == -1)
               continue;
-            var hashflagTextReplacement = ' →' + currentHashflag.a[0].s + currentHashflag.a[0].b;
+            var hashflagTextReplacement = ' ' + currentHashflag.a[0].s + currentHashflag.a[0].b;
             var hashflagRegexExpr = RegExp('<span((?!class).)*?class="' + currentHashflag.class + '[^>]*>((?!<\/span>).)*?<\/span>', 'i');
             tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(hashflagRegexExpr, hashflagTextReplacement);
           }
           
-          for (j = 0; j < tweetImages.length && tweetImages[j]; j++) {
+          for (j = 0; j < tweetImages.length; j++) {
             var currentImage = tweetImages[j];
             var imageTextReplacement = '';
             if (currentImage.class.indexOf("Emoji") > -1)
@@ -313,7 +313,7 @@ function extractTweets(jsonTweets, xmlTweets) {
             tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(/<img[^>]*?class="Emoji[^>]*?\/>/i, '"' + imageTextReplacement + '"');
           }
           
-          for (j = 0; j < tweetLinks.length && tweetLinks[j]; j++) {
+          for (j = 0; j < tweetLinks.length; j++) {
             var currentLink = tweetLinks[j];
             var href = currentLink["data-expanded-url"]; // prefer the real url than the url shortener reference
             if (!href)
@@ -333,7 +333,7 @@ function extractTweets(jsonTweets, xmlTweets) {
               resultLinkPlainText = ' →' + linkText + ' ';
             } else if (/twitter-hashtag|twitter-hashflag|twitter-cashtag|twitter-atreply/.test(currentLink.class)) {
               resultLinkHTML = '<a href="https://twitter.com/' + href + '">' + currentLink.s + currentLink.b + '</a>';
-              resultLinkPlainText = ' →' + currentLink.s + currentLink.b + ' ';
+              resultLinkPlainText = ' ' + currentLink.s + currentLink.b + ' ';
             } else {
               resultLinkHTML = ' <a href="">UNDEFINED LINK TYPE!</a> ';
               resultLinkPlainText = ' →UNDEFINED LINK TYPE! ';
@@ -343,6 +343,9 @@ function extractTweets(jsonTweets, xmlTweets) {
             tweetContentXMLforHTML = tweetContentXMLforHTML.replace(linkRegexExpr, resultLinkHTML);
             tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(linkRegexExpr, resultLinkPlainText);
           }
+          // remove some weird leftover html tag
+          tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(/<p\s+class="TweetTextSize[^>]*>/i, '');
+          
           tweetHTML = tweetContentXMLforHTML.trim();
           tweetText = tweetContentXMLforPlainText.trim();
           // translate some escaped HTML entities to text which do not get translated back when parsing the XML for some reason, e.g. &#39;
