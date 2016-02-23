@@ -212,9 +212,15 @@ function extractTweets(jsonTweets, xmlTweets) {
       var tweetID = tweet["data-tweet-id"];
 
       var body = tweet.div[1]; // class=content
-      if (body.div[0]) { // class=stream-item-header
-        var timeElement = [].concat(body.div[0].small.a.span); // span element may be an array or not. Make sure it is always one.
-        // body.div[0].small.class=time
+      var header = body.div[0]; // class=stream-item-header
+      var bodycontent = body.div[1]; // class=js-tweet-text-container
+      var mediacontent = body.div[2]; // class=AdaptiveMedia
+      if (mediacontent.class.indexOf("AdaptiveMedia") == -1 && mediacontent.class.indexOf("OldMedia") == -1)
+        mediacontent = '';
+      
+      if (header) {
+        var timeElement = [].concat(header.small.a.span); // span element may be an array or not. Make sure it is always one.
+        // header.small.class=time
         if (timeElement[0]) {
           tweetDate = new Date(parseInt(timeElement[0]["data-time-ms"])).toUTCString();
         } else {
@@ -228,7 +234,6 @@ function extractTweets(jsonTweets, xmlTweets) {
       var tweetLinks = [];
       var tweetImages = [];
       var tweetHashflags = [];
-      var bodycontent = body.div[1]; // class=js-tweet-text-container
               
       if (bodycontent.p.content) {
         tweetHTML = bodycontent.p.content;
@@ -258,7 +263,7 @@ function extractTweets(jsonTweets, xmlTweets) {
       tweetImages = cleanupArray(tweetImages);
       tweetHashflags = cleanupArray(tweetHashflags);
       
-      // the text title element may contain HTML so just copy the content
+      // the text title element may contain HTML so just copy the content and do some post processing below for links
       if (tweetHTML)
         tweetText = tweetHTML;
       
@@ -339,7 +344,7 @@ function extractTweets(jsonTweets, xmlTweets) {
               resultLinkPlainText = ' →UNDEFINED LINK TYPE! ';
             }
             // NOTE: reinserting whitespace around link required if removed by the compact XML printer
-            var linkRegexExpr = RegExp('<a((?!class).)*?class="' + currentLink.class + '[^>]*>((?!<\/a>).)*?<\/a>', 'i');
+            var linkRegexExpr = RegExp('<a((?!class)[^>])*?class="' + currentLink.class + '[^>]*>((?!<\/a>).)*?<\/a>', 'i');
             tweetContentXMLforHTML = tweetContentXMLforHTML.replace(linkRegexExpr, resultLinkHTML);
             tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(linkRegexExpr, resultLinkPlainText);
           }
@@ -351,6 +356,15 @@ function extractTweets(jsonTweets, xmlTweets) {
           // translate some escaped HTML entities to text which do not get translated back when parsing the XML for some reason, e.g. &#39;
           tweetHTML = tweetHTML.replace(/&amp;#39;/ig, "'");
           tweetText = tweetText.replace(/&amp;#39;/ig, "'");
+        }
+      }
+      
+      // append a media container at the end of the HMTML body which inlines images
+      if (mediacontent) {
+        var image = mediacontent.div.div.div.img;
+        if (image) {
+          var imageTag = '<img src="' + image.src + '" />';
+          tweetHTML = tweetHTML + '\n<br/>\n' + imageTag;
         }
       }
       
