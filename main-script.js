@@ -226,22 +226,37 @@ function extractTweets(jsonTweets, xmlTweets) {
       var tweetText = '';
       var tweetHTML = '';
       var tweetLinks = [];
+      var tweetImages = [];
+      var tweetHashflags = [];
       var bodycontent = body.div[1]; // class=js-tweet-text-container
               
       if (bodycontent.p.content) {
         tweetHTML = bodycontent.p.content;
-        tweetLinks = tweetLinks.concat(bodycontent.p.a);  // links element may be an array or not. Make sure it is always one.
+        // extracted element may be an array or not. Make sure it is always one by concatenating it to an array.
+        tweetLinks = tweetLinks.concat(bodycontent.p.a);
+        tweetImages = tweetImages.concat(bodycontent.p.img);
+        tweetHashflags = tweetHashflags.concat(bodycontent.p.span); // might not be a hashflag but we will sort that out later
       } else if (bodycontent.p[1] && bodycontent.p[1].content) {
         // newer style commented re-tweet
         tweetHTML = bodycontent.p[1].content;
-        tweetLinks = tweetLinks.concat(bodycontent.p[1].a);  // links element may be an array or not. Make sure it is always one.
+        tweetLinks = tweetLinks.concat(bodycontent.p[1].a);
+        tweetImages = tweetImages.concat(bodycontent.p[1].img);
+        tweetHashflags = tweetHashflags.concat(bodycontent.p[1].span); // might not be a hashflag but we will sort that out later
       } else if (bodycontent.p[1] && bodycontent.p[1].a) { // only links without other body
-        tweetLinks = tweetLinks.concat(bodycontent.p[1].a);  // links element may be an array or not. Make sure it is always one.
+        tweetLinks = tweetLinks.concat(bodycontent.p[1].a);
+        tweetImages = tweetImages.concat(bodycontent.p[1].img);
+        tweetHashflags = tweetHashflags.concat(bodycontent.p[1].span); // might not be a hashflag but we will sort that out later
       } else if (bodycontent.p.a) { // only links without other body
-        tweetLinks = tweetLinks.concat(bodycontent.p.a);  // links element may be an array or not. Make sure it is always one.
+        tweetLinks = tweetLinks.concat(bodycontent.p.a); 
+        tweetImages = tweetImages.concat(bodycontent.p.img);
+        tweetHashflags = tweetHashflags.concat(bodycontent.p.span); // might not be a hashflag but we will sort that out later
       } else {
-        Logger.log("Could not extract text from tweet:\n" + bodycontent);
+        Logger.log("Could not extract content from tweet:\n" + bodycontent);
       }
+      
+      tweetLinks = cleanupArray(tweetLinks);
+      tweetImages = cleanupArray(tweetImages);
+      tweetHashflags = cleanupArray(tweetHashflags);
       
       // the text title element may contain HTML so just copy the content
       if (tweetHTML)
@@ -249,34 +264,63 @@ function extractTweets(jsonTweets, xmlTweets) {
       
       var tweetContentXML = '';
       // if there are links in the tweet then we need to reinsert them as they were extracted as separate JSON elements 
-      if (tweetLinks.length > 0 && tweetLinks[0]) {
-        // first extract the tweet content from the XML/HTML text using regexes to know where to place the links
+      if (tweetLinks.length > 0 || tweetImages.length > 0 || tweetHashflags.length > 0) {
+        // first extract the tweet content from the XML/HTML text using regexes to know where to place the links.
+        // Note that the regex xml/html processing is quite hacky and should be replaced with proper xml entities handling!
         
         // Reminder: the *? syntax applies non-greedy capturing
         // below is not working as the non-greedy '.*?' still captures more tweets before capturing the one with the right 'data-tweet-id'
 //        var tweetRegex = RegExp('<li class="js-stream-item [^>]*?>(.*?data-tweet-id="' + tweetID + '".*?)</li>.*?data-tweet-id', 'i');
         // thus we use the negative look-around to state that we want the first 'data-tweet-id' after the opening 'li' that matches the id number
         // see http://stackoverflow.com/questions/406230/regular-expression-to-match-text-that-doesnt-contain-a-word for the syntax to forbid strings in matches
+        
+        // Note: [\s\S] stands for \s: all the whitespace chars and \S: their negation, so all chars and newline etc. This is more than the dot '.' as it captures newlines
+        // and in Javascript the . does not capture them. The dot . still works as we replace newlines with spaces in the XML preprocessing.
+        
         var tweetRegex = RegExp('<li class="js-stream-item [^>]*?>(((?!data-tweet-id).)*?data-tweet-id="' + tweetID + '.*?)</li>', 'i');
         var tweetXML = '';
         tweetXML = tweetRegex.exec(xmlTweets);
         if (tweetXML)
           tweetXML = tweetXML[1];
+        
         var tweetContentRegex = RegExp(/<p\s+class=".*?js-tweet-text.*?"[^>]*?>(.*?)<\/p>/i);
         tweetContentXML = tweetContentRegex.exec(tweetXML);
         if (tweetContentXML) {
           tweetContentXML = tweetContentXML[1];
           var tweetContentXMLforHTML = tweetContentXML;
           var tweetContentXMLforPlainText = tweetContentXML;
+
+          for (j = 0; j < tweetHashflags.length && tweetHashflags[j]; j++) {
+            var currentHashflag = tweetHashflags[j];
+            if (currentHashflag.class.indexOf("twitter-hashflag-container") == -1)
+              continue;
+            var hashflagTextReplacement = ' →' + currentHashflag.a[0].s + currentHashflag.a[0].b;
+            var hashflagRegexExpr = RegExp('<span((?!class).)*?class="' + currentHashflag.class + '[^>]*>((?!<\/span>).)*?<\/span>', 'i');
+            tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(hashflagRegexExpr, hashflagTextReplacement);
+          }
           
-          for (j = 0; j < tweetLinks.length; j++) {
+          for (j = 0; j < tweetImages.length && tweetImages[j]; j++) {
+            var currentImage = tweetImages[j];
+            var imageTextReplacement = '';
+            if (currentImage.class.indexOf("Emoji") > -1)
+              if (currentImage.alt)
+                imageTextReplacement = currentImage.alt;
+              else
+                imageTextReplacement = currentImage.title;
+            else
+              imageTextReplacement = ' UNKNOWN IMAGE TYPE ';
+            
+            tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(/<img[^>]*?class="Emoji[^>]*?\/>/i, '"' + imageTextReplacement + '"');
+          }
+          
+          for (j = 0; j < tweetLinks.length && tweetLinks[j]; j++) {
             var currentLink = tweetLinks[j];
             var href = currentLink["data-expanded-url"]; // prefer the real url than the url shortener reference
             if (!href)
               href = currentLink.href;
 
-            var resultLinkHTML = ''
-            var resultLinkPlainText = ''
+            var resultLinkHTML = '';
+            var resultLinkPlainText = '';
             if (currentLink.class.indexOf("twitter-timeline-link") > -1) {
               var linkText = ' "LINK PARSE ERROR" ';
               if (currentLink.span && currentLink.span[2].class === 'js-display-url') // prefer the cutoff url with ellipsis to the complete url
@@ -287,7 +331,7 @@ function extractTweets(jsonTweets, xmlTweets) {
                 linkText = currentLink.content;
               resultLinkHTML = '<a href="' + href + '">' + linkText + '</a>';
               resultLinkPlainText = ' →' + linkText + ' ';
-            } else if (/twitter-hashtag|twitter-cashtag|twitter-atreply/.test(currentLink.class)) {
+            } else if (/twitter-hashtag|twitter-hashflag|twitter-cashtag|twitter-atreply/.test(currentLink.class)) {
               resultLinkHTML = '<a href="https://twitter.com/' + href + '">' + currentLink.s + currentLink.b + '</a>';
               resultLinkPlainText = ' →' + currentLink.s + currentLink.b + ' ';
             } else {
@@ -295,8 +339,9 @@ function extractTweets(jsonTweets, xmlTweets) {
               resultLinkPlainText = ' →UNDEFINED LINK TYPE! ';
             }
             // NOTE: reinserting whitespace around link required if removed by the compact XML printer
-            tweetContentXMLforHTML = tweetContentXMLforHTML.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, resultLinkHTML);
-            tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(/<a\s+class="twitter[^>]*>.*?<\/a>/i, resultLinkPlainText);
+            var linkRegexExpr = RegExp('<a((?!class).)*?class="' + currentLink.class + '[^>]*>((?!<\/a>).)*?<\/a>', 'i');
+            tweetContentXMLforHTML = tweetContentXMLforHTML.replace(linkRegexExpr, resultLinkHTML);
+            tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(linkRegexExpr, resultLinkPlainText);
           }
           tweetHTML = tweetContentXMLforHTML.trim();
           tweetText = tweetContentXMLforPlainText.trim();
@@ -319,4 +364,22 @@ function extractTweets(jsonTweets, xmlTweets) {
     }
   }
   return toReturn;
+}
+
+/**
+ * Remove null elements from an Array.
+ * Returns a shallow copy of the array.
+ *
+ * @param {Array} array The array to clean up.
+ */
+function cleanupArray(array) {
+  var arrayCopy = [];
+  var j = 0;
+  for (i = 0; i < array.length; i++) {
+    if (array[i]) {
+      arrayCopy[j] = array[i];
+      j++;
+    } 
+  }
+  return arrayCopy;
 }
