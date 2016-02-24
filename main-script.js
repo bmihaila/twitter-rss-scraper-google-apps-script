@@ -193,8 +193,7 @@ function makeRSS(user, include_replies, tweets) {
  */
 function extractTweets(jsonTweets, xmlTweets) {
   var toReturn = [];
-  var i = 0;
-  for (i = 0; i < jsonTweets.li.length; i++) {
+  for (var i = 0; i < jsonTweets.li.length; i++) {
     if (jsonTweets.li[i]) {
       var tweet = jsonTweets.li[i].div;
       if (!tweet && jsonTweets.li[i].ol) // conversation retweet style
@@ -295,7 +294,7 @@ function extractTweets(jsonTweets, xmlTweets) {
           var tweetContentXMLforHTML = tweetContentXML;
           var tweetContentXMLforPlainText = tweetContentXML;
 
-          for (j = 0; j < tweetHashflags.length; j++) {
+          for (var j = 0; j < tweetHashflags.length; j++) {
             var currentHashflag = tweetHashflags[j];
             if (currentHashflag.class.indexOf("twitter-hashflag-container") == -1)
               continue;
@@ -304,7 +303,7 @@ function extractTweets(jsonTweets, xmlTweets) {
             tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(hashflagRegexExpr, hashflagTextReplacement);
           }
           
-          for (j = 0; j < tweetImages.length; j++) {
+          for (var j = 0; j < tweetImages.length; j++) {
             var currentImage = tweetImages[j];
             var imageTextReplacement = '';
             if (currentImage.class.indexOf("Emoji") > -1)
@@ -318,7 +317,7 @@ function extractTweets(jsonTweets, xmlTweets) {
             tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(/<img[^>]*?class="Emoji[^>]*?\/>/i, '"' + imageTextReplacement + '"');
           }
           
-          for (j = 0; j < tweetLinks.length; j++) {
+          for (var j = 0; j < tweetLinks.length; j++) {
             var currentLink = tweetLinks[j];
             var href = currentLink["data-expanded-url"]; // prefer the real url than the url shortener reference
             if (!href)
@@ -361,7 +360,15 @@ function extractTweets(jsonTweets, xmlTweets) {
       
       // append a media container at the end of the HMTML body which inlines images
       if (mediacontent) {
-        var image = mediacontent.div.div.div.img;
+        var image = '';
+        var mediacontainer = '';
+        if (mediacontent.div.div)
+          mediacontent = mediacontent.div.div;
+        else if (mediacontent.div[1].div) // warning about media is div[0]
+          mediacontainer = mediacontent.div[1].div;
+         
+        if (mediacontainer)
+          image = mediacontainer.div.img;
         if (image) {
           var imageTag = '<img src="' + image.src + '" />';
           tweetHTML = tweetHTML + '\n<br/>\n' + imageTag;
