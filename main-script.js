@@ -213,9 +213,17 @@ function extractTweets(jsonTweets, xmlTweets) {
       var body = tweet.div[1]; // class=content
       var header = body.div[0]; // class=stream-item-header
       var bodycontent = body.div[1]; // class=js-tweet-text-container
-      var mediacontent = body.div[2]; // class=AdaptiveMedia
-      if (mediacontent.class.indexOf("AdaptiveMedia") == -1 && mediacontent.class.indexOf("OldMedia") == -1)
-        mediacontent = '';
+      // search for mediacontent in the remaining divs
+      var mediacontent = '';  // class=AdaptiveMedia
+      for (var j = 2; j < body.div.length; j++) {
+        var element = body.div[j];
+        if (!element)
+          continue;
+        if (element.class.indexOf("AdaptiveMedia") > -1 || element.class.indexOf("OldMedia") > -1 ) {
+          mediacontent = element;
+          break;
+        }
+      }
       
       if (header) {
         var timeElement = [].concat(header.small.a.span); // span element may be an array or not. Make sure it is always one.
@@ -363,7 +371,7 @@ function extractTweets(jsonTweets, xmlTweets) {
         var image = '';
         var mediacontainer = '';
         if (mediacontent.div.div)
-          mediacontent = mediacontent.div.div;
+          mediacontainer = mediacontent.div.div;
         else if (mediacontent.div[1].div) // warning about media is div[0]
           mediacontainer = mediacontent.div[1].div;
          
