@@ -103,16 +103,11 @@ function tweetsFor(user, include_replies, tweets_count) {
     return;
   }
 
-//  var xmlTweets = result.getContentText();
+  var xmlContentRaw = result.getContentText();
+  // parsing and outputting the text again gets us some normalization of the html/xml and the newlines/whitespaces between elements
+  var xmlDocument = XmlService.parse(xmlContentRaw);
   // Need to remove all newlines from the XML to be able to use the dot "." in capturing groups
-//  xmlTweets  = xmlTweets.replace(/(\r\n|\n|\r)/g, ' ');
-//  xmlTweets  = xmlTweets.replace(/\s+/g, ' ');
-  // parsing and outputting the text again gets us some pretty-printing of the html/xml, which is good for debugging but can be skipped otherwise for performance.
-  var xmlDocument = XmlService.parse(result.getContentText());
-//  var xmlTweets = XmlService.getCompactFormat().format(xmlDocument);
-  // Using the above compact formatter seems to be twice as fast than using a regex to remove the newlines!! However, it is still up to 4x slower than without it.
-  // One drawback is that also whitespaces between xml elements (e.g. <a> links) are removed and thus have to be reinserted below when inserting links, so we use the solution below
-  var xmlTweets = XmlService.getPrettyFormat().setLineSeparator(' ').format(xmlDocument);
+  var xmlTweets = XmlService.getPrettyFormat().setLineSeparator(' ').setIndent('').format(xmlDocument);
   
   var tweets = extractTweets(jsonTweets, xmlTweets);
   return tweets;
@@ -320,7 +315,7 @@ function extractTweets(jsonTweets, xmlTweets) {
               else
                 imageTextReplacement = currentImage.title;
             else
-              imageTextReplacement = ' UNKNOWN IMAGE TYPE ';
+              imageTextReplacement = ' "UNKNOWN IMAGE TYPE" ';
             
             tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(/<img[^>]*?class="Emoji[^>]*?\/>/i, '"' + imageTextReplacement + '"');
           }
@@ -334,7 +329,7 @@ function extractTweets(jsonTweets, xmlTweets) {
             var resultLinkHTML = '';
             var resultLinkPlainText = '';
             if (currentLink.class.indexOf("twitter-timeline-link") > -1) {
-              var linkText = ' "LINK PARSE ERROR" ';
+              var linkText = '"LINK PARSE ERROR"';
               if (currentLink.span && currentLink.span[2].class === 'js-display-url') // prefer the cutoff url with ellipsis to the complete url
                 linkText = currentLink.span[2].content + '…';
               else if (currentLink.title)
@@ -342,15 +337,14 @@ function extractTweets(jsonTweets, xmlTweets) {
               else if (currentLink.content)
                 linkText = currentLink.content;
               resultLinkHTML = '<a href="' + href + '">' + linkText + '</a>';
-              resultLinkPlainText = ' →' + linkText + ' ';
+              resultLinkPlainText = '→' + linkText;
             } else if (/twitter-hashtag|twitter-hashflag|twitter-cashtag|twitter-atreply/.test(currentLink.class)) {
               resultLinkHTML = '<a href="https://twitter.com/' + href + '">' + currentLink.s + currentLink.b + '</a>';
-              resultLinkPlainText = ' ' + currentLink.s + currentLink.b + ' ';
+              resultLinkPlainText = '' + currentLink.s + currentLink.b;
             } else {
-              resultLinkHTML = ' <a href="">UNDEFINED LINK TYPE!</a> ';
-              resultLinkPlainText = ' →UNDEFINED LINK TYPE! ';
+              resultLinkHTML = '<a href="">UNDEFINED LINK TYPE!</a>';
+              resultLinkPlainText = '→UNDEFINED LINK TYPE!';
             }
-            // NOTE: reinserting whitespace around link required if removed by the compact XML printer
             var linkRegexExpr = RegExp('<a((?!class)[^>])*?class="' + currentLink.class + '[^>]*>((?!<\/a>).)*?<\/a>', 'i');
             tweetContentXMLforHTML = tweetContentXMLforHTML.replace(linkRegexExpr, resultLinkHTML);
             tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(linkRegexExpr, resultLinkPlainText);
