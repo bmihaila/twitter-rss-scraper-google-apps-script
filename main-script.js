@@ -73,22 +73,38 @@ function tweetsFor(user, include_replies, tweets_count) {
   // The Yahoo YQL API is limited at 2000 queries per hour per IP for public requests. Upping this to 20k request would require an account and authentification using OAuth.
   // See https://developer.yahoo.com/yql/guide/overview.html#usage-information-and-limits
   // As each request is for querying a Twitter feed the public limit should be ok for most private/single user usages.
-  var yqlQueryUrlPart = 'SELECT * FROM html WHERE ' + 'url="' + twitterURL + '" AND xpath="//li[contains(@class, \'js-stream-item\')]"';
-  var yqlJSONQuery = 'http://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(yqlQueryUrlPart);  
+  var yqlQueryUrlPart = 'SELECT * FROM html WHERE url="' + twitterURL + '" AND xpath="//li[contains(@class, \'js-stream-item\')]"';
+  var yqlJSONQuery = 'http://query.yahooapis.com/v1/public/yql?format=json&diagnostics=true&q=' + encodeURIComponent(yqlQueryUrlPart);  
   
   var options = {
     "method": "get",
-    "escaping" : false // we use the escaping method above
+    "escaping" : false, // we use the escaping method above
+// for test purposes
+//    "headers" : {
+//      "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:50.0) Gecko/20100101 Firefox/50.0",
+//      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+//      "Accept-Language": "en,en-US;q=0.7,de;q=0.3",
+//      "Accept-Encoding": "gzip, deflate, br",
+//      "Upgrade-Insecure-Requests": 1,
+//      "Pragma": "no-cache",
+//      "Cache-Control": "no-cache",
+//      "Referer": "https://www.google.com",
+//      "Connection": "keep-alive"
+//    }
   };
   var result = UrlFetchApp.fetch(yqlJSONQuery, options);
   if (result.getResponseCode() != 200) {
     Logger.log("Problems running query " + result.getResponseCode());
     return;
   }
-  var data = JSON.parse(result.getContentText());
+  var content = result.getContentText()
+  var data = JSON.parse(content);
   if (null == data.query.results) {
     Logger.log("Couldn't retrieve anything from Twitter for " + user);
-    Logger.log("Yahoo query to retrieve the Twitter did not return any data. Below the response headers:\n" + JSON.stringify(result.getAllHeaders()));
+    Logger.log("Yahoo query to retrieve sites from Twitter did not return any data.");
+    Logger.log("The query was: " + yqlJSONQuery);
+    Logger.log("The response headers:\n" + JSON.stringify(result.getAllHeaders()));
+    Logger.log("The response diagnostic messages:\n" + JSON.stringify(data.query.diagnostics));
     return;
   }
   var jsonTweets = data.query.results;
@@ -345,6 +361,7 @@ function extractTweets(jsonTweets, xmlTweets) {
               resultLinkHTML = '<a href="">UNDEFINED LINK TYPE!</a>';
               resultLinkPlainText = '→UNDEFINED LINK TYPE!';
             }
+            // NOTE: reinserting whitespace around link required if removed by the compact XML printer
             var linkRegexExpr = RegExp('<a((?!class)[^>])*?class="' + currentLink.class + '[^>]*>((?!<\/a>).)*?<\/a>', 'i');
             tweetContentXMLforHTML = tweetContentXMLforHTML.replace(linkRegexExpr, resultLinkHTML);
             tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(linkRegexExpr, resultLinkPlainText);
