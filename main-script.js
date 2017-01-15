@@ -1,5 +1,5 @@
 /*
- * (c) Copyright 2014 Charlie Harvey, 2015, 2016 Bogdan Mihaila
+ * (c) Copyright 2014 Charlie Harvey, 2015 - 2017 Bogdan Mihaila
  * 
  * This program is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
