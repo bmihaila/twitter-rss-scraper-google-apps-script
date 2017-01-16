@@ -385,12 +385,17 @@ function extractTweets(jsonTweets, xmlTweets) {
           mediacontainer = mediacontent.div.div;
         else if (mediacontent.div[1].div) // warning about media is div[0]
           mediacontainer = mediacontent.div[1].div;
-         
-        if (mediacontainer)
-          image = mediacontainer.div.img;
-        if (image) {
-          var imageTag = '<img src="' + image.src + '" />';
-          tweetHTML = tweetHTML + '\n<br/>\n' + imageTag;
+
+        if (mediacontainer) {
+            var pictures = extractPictures(mediacontainer);
+            if (pictures.length > 0 ) {
+                for (var j = 0; j < pictures.length; j++) {
+                    if (!pictures[j])
+                        continue;
+                    var imageTag = '<img src="' + pictures[j].src + '" />';
+                    tweetHTML = tweetHTML + '\n<br/>\n' + imageTag;
+                }
+            }
         }
       }
       
@@ -410,6 +415,27 @@ function extractTweets(jsonTweets, xmlTweets) {
 }
 
 /**
+ * Extract all the image elements from a MediaContainer.
+ *
+ * @param {JSON} mediacontainer the container from the tweet
+ * @return {Array} an array of all the images found
+ */
+function extractPictures(mediacontainer) {
+    var pictures = [];
+    if (mediacontainer.div.img) { // one image only
+        pictures.push(mediacontainer.div.img);
+        return pictures;
+    } else {
+        for (var j = 0; j < mediacontainer.div.length; j++)
+            if (mediacontainer.div[j].div.img)
+                pictures.push(mediacontainer.div[j].div.img);
+            else
+                pictures.concat(extractPictures(mediacontainer.div[j]))
+    }
+    return pictures;
+}
+
+/**
  * Remove null elements from an Array.
  * Returns a shallow copy of the array.
  *
@@ -418,7 +444,7 @@ function extractTweets(jsonTweets, xmlTweets) {
 function cleanupArray(array) {
   var arrayCopy = [];
   var j = 0;
-  for (i = 0; i < array.length; i++) {
+  for (var i = 0; i < array.length; i++) {
     if (array[i]) {
       arrayCopy[j] = array[i];
       j++;
