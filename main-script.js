@@ -78,7 +78,7 @@ function tweetsFor(user, include_replies, tweets_count) {
   
   var options = {
     "method": "get",
-    "escaping" : false, // we use the escaping method above
+    "escaping" : false // we use the escaping method above
 // for test purposes
 //    "headers" : {
 //      "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:50.0) Gecko/20100101 Firefox/50.0",
@@ -303,14 +303,15 @@ function extractTweets(jsonTweets, xmlTweets) {
         
         // Note: [\s\S] stands for \s: all the whitespace chars and \S: their negation, so all chars and newline etc. This is more than the dot '.' as it captures newlines
         // and in Javascript the . does not capture them. The dot . still works as we replace newlines with spaces in the XML preprocessing.
-        
-        var tweetRegex = RegExp('<li class="js-stream-item [^>]*?>(((?!data-tweet-id).)*?data-tweet-id="' + tweetID + '.*?)</li>', 'i');
+
+        var tweetRegex = new RegExp('<li class="js-stream-item [^>]*?>(((?!data-tweet-id).)*?data-tweet-id="' + tweetID +
+            '.*?<div class="js-tweet-text-container">.*?</div>[^<>]*?)</li>', 'i');
         var tweetXML = '';
         tweetXML = tweetRegex.exec(xmlTweets);
         if (tweetXML)
           tweetXML = tweetXML[1];
         
-        var tweetContentRegex = RegExp(/<p\s+class=".*?js-tweet-text.*?"[^>]*?>(.*?)<\/p>/i);
+        var tweetContentRegex = new RegExp(/<p\s+class=".*?js-tweet-text.*?"[^>]*?>(.*?)<\/p>/i);
         tweetContentXML = tweetContentRegex.exec(tweetXML);
         if (tweetContentXML) {
           tweetContentXML = tweetContentXML[1];
@@ -322,7 +323,7 @@ function extractTweets(jsonTweets, xmlTweets) {
             if (currentHashflag.class.indexOf("twitter-hashflag-container") == -1)
               continue;
             var hashflagTextReplacement = ' ' + currentHashflag.a[0].s + currentHashflag.a[0].b;
-            var hashflagRegexExpr = RegExp('<span((?!class).)*?class="' + currentHashflag.class + '[^>]*>((?!<\/span>).)*?<\/span>', 'i');
+            var hashflagRegexExpr = new RegExp('<span((?!class).)*?class="' + currentHashflag.class + '[^>]*>((?!<\/span>).)*?<\/span>', 'i');
             tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(hashflagRegexExpr, hashflagTextReplacement);
           }
           
@@ -366,7 +367,7 @@ function extractTweets(jsonTweets, xmlTweets) {
               resultLinkPlainText = '→UNDEFINED LINK TYPE!';
             }
             // NOTE: reinserting whitespace around link required if removed by the compact XML printer
-            var linkRegexExpr = RegExp('<a((?!class)[^>])*?class="' + currentLink.class + '[^>]*>((?!<\/a>).)*?<\/a>', 'i');
+            var linkRegexExpr = new RegExp('<a((?!class)[^>])*?class="' + currentLink.class + '[^>]*>((?!<\/a>).)*?<\/a>', 'i');
             tweetContentXMLforHTML = tweetContentXMLforHTML.replace(linkRegexExpr, resultLinkHTML);
             tweetContentXMLforPlainText = tweetContentXMLforPlainText.replace(linkRegexExpr, resultLinkPlainText);
           }
