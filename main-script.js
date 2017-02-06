@@ -222,6 +222,10 @@ function extractTweets(jsonTweets, xmlTweets) {
       var tweetID = tweet["data-tweet-id"];
 
       var body = tweet.div[1]; // class=content
+      if (!body) {
+          Logger.log("Could not extract a tweet from:\n" + body);
+          continue;  // mostly for retracted tweets - censored ones, etc.
+      }
       var header = body.div[0]; // class=stream-item-header
       var bodycontent = body.div[1]; // class=js-tweet-text-container
       // search for mediacontent in the remaining divs
