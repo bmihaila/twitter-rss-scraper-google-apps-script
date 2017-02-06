@@ -422,15 +422,15 @@ function extractTweets(jsonTweets, xmlTweets) {
  */
 function extractPictures(mediacontainer) {
     var pictures = [];
-    if (mediacontainer.div.img) { // one image only
-        pictures.push(mediacontainer.div.img);
-        return pictures;
-    } else {
-        for (var j = 0; j < mediacontainer.div.length; j++)
-            if (mediacontainer.div[j].div.img)
-                pictures.push(mediacontainer.div[j].div.img);
-            else
-                pictures.concat(extractPictures(mediacontainer.div[j]))
+    var picDivs = [].concat(mediacontainer.div); // element may be an array or not. Make sure it is always one.
+    for (var j = 0; j < picDivs.length; j++) {
+        if (!picDivs[j].div)
+            continue;
+
+        if (picDivs[j].div.img)
+            pictures.push(picDivs[j].div.img);
+        else
+            pictures = pictures.concat(extractPictures(picDivs[j]));
     }
     return pictures;
 }
