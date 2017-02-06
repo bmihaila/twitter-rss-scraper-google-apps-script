@@ -380,21 +380,20 @@ function extractTweets(jsonTweets, xmlTweets) {
       // append a media container at the end of the HMTML body which inlines images
       if (mediacontent) {
         var image = '';
-        var mediacontainer = '';
-        if (mediacontent.div.div)
-          mediacontainer = mediacontent.div.div;
-        else if (mediacontent.div[1].div) // warning about media is div[0]
-          mediacontainer = mediacontent.div[1].div;
+        var pictures = [];
+        var mediacontainers = [].concat(mediacontent.div); // element may be an array or not. Make sure it is always one.
+        for (var j = 0; j < mediacontainers.length; j++) {
+            if (!mediacontainers[j].div)
+                continue;
+            pictures = pictures.concat(extractPictures(mediacontainers[j].div));
+        }
 
-        if (mediacontainer) {
-            var pictures = extractPictures(mediacontainer);
-            if (pictures.length > 0 ) {
-                for (var j = 0; j < pictures.length; j++) {
-                    if (!pictures[j])
-                        continue;
-                    var imageTag = '<img src="' + pictures[j].src + '" />';
-                    tweetHTML = tweetHTML + '\n<br/>\n' + imageTag;
-                }
+        if (pictures.length > 0 ) {
+            for (var j = 0; j < pictures.length; j++) {
+                if (!pictures[j])
+                    continue;
+                var imageTag = '<img src="' + pictures[j].src + '" />';
+                tweetHTML = tweetHTML + '\n<br/>\n' + imageTag;
             }
         }
       }
@@ -422,7 +421,12 @@ function extractTweets(jsonTweets, xmlTweets) {
  */
 function extractPictures(mediacontainer) {
     var pictures = [];
-    var picDivs = [].concat(mediacontainer.div); // element may be an array or not. Make sure it is always one.
+    var picDivs = [];
+    if (mediacontainer.div)
+        picDivs = picDivs.concat(mediacontainer.div);
+    else
+        picDivs = picDivs.concat(mediacontainer);
+
     for (var j = 0; j < picDivs.length; j++) {
         if (!picDivs[j].div)
             continue;
