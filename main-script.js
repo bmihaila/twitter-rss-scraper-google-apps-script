@@ -226,18 +226,19 @@ function extractTweets(jsonTweets, xmlTweets) {
           Logger.log("Could not extract a tweet from:\n" + body);
           continue;  // mostly for retracted tweets - censored ones, etc.
       }
-      var header = body.div[0]; // class=stream-item-header
-      var bodycontent = body.div[1]; // class=js-tweet-text-container
-      // search for mediacontent in the remaining divs
-      var mediacontent = '';  // class=AdaptiveMedia
-      for (var j = 2; j < body.div.length; j++) {
+      var header = '';
+      var bodycontent = '';
+      var mediacontent = '';
+      for (var j = 0; j < body.div.length; j++) {
         var element = body.div[j];
         if (!element)
           continue;
-        if (element.class.indexOf("AdaptiveMedia") > -1 || element.class.indexOf("OldMedia") > -1 ) {
+        if (element.class.indexOf("stream-item-header") > -1)
+          header = element;
+        else if (element.class.indexOf("js-tweet-text-container") > -1)
+          bodycontent = element;
+        else if (element.class.indexOf("AdaptiveMedia") > -1 || element.class.indexOf("OldMedia") > -1 )
           mediacontent = element;
-          break;
-        }
       }
       
       if (header) {
@@ -251,12 +252,17 @@ function extractTweets(jsonTweets, xmlTweets) {
         }
       }
 
+      if (!bodycontent) {
+          Logger.log("Could not extract a tweet from:\n" + bodycontent);
+          continue;
+      }
+
       var tweetText = '';
       var tweetHTML = '';
       var tweetLinks = [];
       var tweetImages = [];
       var tweetHashflags = [];
-              
+
       if (bodycontent.p.content) {
         tweetHTML = bodycontent.p.content;
         // extracted element may be an array or not. Make sure it is always one by concatenating it to an array.
