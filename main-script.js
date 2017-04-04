@@ -15,6 +15,8 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+var backgroundImageRegex = new RegExp(/background-image:url\('(.*)'\)/);
+
 /**
  * To be used for testing and debugging. 
  * Calls the main entry function with a set of example parameters
@@ -403,7 +405,7 @@ function extractTweets(jsonTweets, xmlTweets) {
             for (var j = 0; j < pictures.length; j++) {
                 if (!pictures[j])
                     continue;
-                var imageTag = '<img src="' + pictures[j].src + '" />';
+                var imageTag = '<img src="' + pictures[j] + '" />';
                 tweetHTML = tweetHTML + '\n<br/>\n' + imageTag;
             }
         }
@@ -442,10 +444,15 @@ function extractPictures(mediacontainer) {
         if (!picDivs[j].div)
             continue;
 
-        if (picDivs[j].div.img)
-            pictures.push(picDivs[j].div.img);
-        else
+        if (picDivs[j].div.img) {
+            pictures.push(picDivs[j].div.img.src);
+        } else if (picDivs[j].div.style) { // extract video background image
+            var match = backgroundImageRegex.exec(picDivs[j].div.style);
+            if (match)
+                pictures.push(match[1]);
+        } else {
             pictures = pictures.concat(extractPictures(picDivs[j]));
+        }
     }
     return pictures;
 }
