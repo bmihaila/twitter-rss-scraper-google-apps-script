@@ -93,13 +93,13 @@ function tweetsFor(user, include_replies, tweets_count) {
 //    }
   };
   var result = UrlFetchApp.fetch(yqlJSONQuery, options);
-  if (result.getResponseCode() != 200) {
+  if (result.getResponseCode() !== 200) {
     Logger.log("Problems running query " + result.getResponseCode());
     return;
   }
-  var content = result.getContentText()
+  var content = result.getContentText();
   var data = JSON.parse(content);
-  if (null == data.query.results) {
+  if (null === data.query.results) {
     Logger.log("Couldn't retrieve anything from Twitter for " + user);
     Logger.log("Yahoo query to retrieve sites from Twitter did not return any data.");
     Logger.log("The query was: " + yqlJSONQuery);
@@ -114,7 +114,7 @@ function tweetsFor(user, include_replies, tweets_count) {
   // TODO: a better method would be to retrieve the XML and then transform that to JSON but that is not possible afaik without using an external library
   var yqlXMLQuery = yqlJSONQuery.replace(/format=json/, "format=xml");
   result = UrlFetchApp.fetch(yqlXMLQuery, options);
-  if (result.getResponseCode() != 200) {
+  if (result.getResponseCode() !== 200) {
     Logger.log("Problems running query " + result.getResponseCode());
     return;
   }
@@ -326,7 +326,7 @@ function extractTweets(jsonTweets, xmlTweets) {
 
           for (var j = 0; j < tweetHashflags.length; j++) {
             var currentHashflag = tweetHashflags[j];
-            if (currentHashflag.class.indexOf("twitter-hashflag-container") == -1)
+            if (currentHashflag.class.indexOf("twitter-hashflag-container") === -1)
               continue;
             var hashflagTextReplacement = ' ' + currentHashflag.a[0].s + currentHashflag.a[0].b;
             var hashflagRegexExpr = new RegExp('<span((?!class).)*?class="' + currentHashflag.class + '[^>]*>((?!<\/span>).)*?<\/span>', 'i');
