@@ -406,7 +406,7 @@ function extractTweets(jsonTweets, xmlTweets) {
                 if (!pictures[j])
                     continue;
                 var imageTag = '<img src="' + pictures[j] + '" />';
-                tweetHTML = tweetHTML + '\n<br/>\n' + imageTag;
+                tweetHTML = tweetHTML + '\n<br/><br/>\n' + imageTag;
             }
         }
       }
