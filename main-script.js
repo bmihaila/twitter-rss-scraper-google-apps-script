@@ -208,7 +208,7 @@ function extractTweets(jsonTweets, xmlTweets) {
   var toReturn = [];
   for (var i = 0; i < jsonTweets.li.length; i++) {
     if (jsonTweets.li[i]) {
-      var tweet = jsonTweets.li[i].div;
+      var tweet = [].concat(jsonTweets.li[i].div)[0];  // might be an array, make sure it is one and pick the right element
       if (!tweet && jsonTweets.li[i].ol) // conversation retweet style
         tweet = jsonTweets.li[i].ol.li.div;
       if (!tweet || tweet.class.indexOf("js-stream-tweet") < 0) {
