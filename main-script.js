@@ -106,7 +106,10 @@ function tweetsFor(user, include_replies, tweets_count) {
     Logger.log("Yahoo query to retrieve sites from Twitter did not return any data.");
     Logger.log("The query was: " + yqlJSONQuery);
     Logger.log("The response headers:\n" + JSON.stringify(result.getAllHeaders()));
-    Logger.log("The response diagnostic messages:\n" + JSON.stringify(data.query.diagnostics));
+    if (data.query.diagnostics)
+        Logger.log("The response 'diagnostic' messages:\n" + JSON.stringify(data.query.diagnostics));
+    if (data.query.meta)
+        Logger.log("The response 'meta' messages:\n" + JSON.stringify(data.query.meta));
     return;
   }
   var jsonTweets = data.query.results;
