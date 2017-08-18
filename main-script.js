@@ -26,7 +26,6 @@ function testMain() {
   var e = {};
   e.parameter = {};
   e.parameter.user = "twitter";
-  e.parameter.replies = "on";
   // e.parameter.tweetscount = "100";
   doGet(e);
 }
@@ -41,18 +40,15 @@ function doGet(e) {
   var user = e.parameter.user;
   if (!user)
     return ContentService.createTextOutput("Error: no user specified!");
-  var include_replies = false;
-  if (e.parameter.replies === "on")
-    include_replies = true;
   var tweets_count = 100;
   var tweets_count_param = parseInt(e.parameter.tweetscount);
   if (!isNaN(tweets_count_param) && tweets_count_param > 0)
     tweets_count = tweets_count_param;
 
-  var tweets = tweetsFor(user, include_replies, tweets_count);
+  var tweets = tweetsFor(user, tweets_count);
   if (!tweets)
     return ContentService.createTextOutput("Error: no tweets could be parsed!\n\nLog messages:\n" + Logger.getLog());
-  var rss = makeRSS(user, include_replies, tweets);
+  var rss = makeRSS(user, tweets);
   var output = ContentService.createTextOutput();
   output.setMimeType(ContentService.MimeType.RSS);
   output.append(rss);
@@ -63,15 +59,11 @@ function doGet(e) {
  * Generate an array of tweets data for a user name.
  * 
  * @param {String} user The username to request the tweets for
- * @param {Boolean} include_replies If to include the reply tweets from the user timeline   
- * @param {Number} tweets_count How many tweets from the user timeline should be included 
+ * @param {Number} tweets_count How many tweets from the user timeline should be included
  */
-function tweetsFor(user, include_replies, tweets_count) {
-  var with_replies = '';
-  if (include_replies)
-    with_replies = 'with_replies';
+function tweetsFor(user, tweets_count) {
   var parsedText;
-  var twitterURL = 'https://twitter.com/' + user + '/' + with_replies + '?count=' + tweets_count;
+  var twitterURL = 'https://twitter.com/' + user + '/' + '?count=' + tweets_count;
   // The Yahoo YQL API is limited at 2000 queries per hour per IP for public requests. Upping this to 20k request would require an account and authentification using OAuth.
   // See https://developer.yahoo.com/yql/guide/overview.html#usage-information-and-limits
   // As each request is for querying a Twitter feed the public limit should be ok for most private/single user usages.
@@ -138,14 +130,9 @@ function tweetsFor(user, include_replies, tweets_count) {
  * Assemble the RSS response from the tweets.
  *
  * @param {String} user The username to request the tweets for
- * @param {Boolean} include_replies If to include the reply tweets from the user timeline   
  * @param {Object} tweets The array of tweets, organized as a dictionary of keys and twitter data
  */
-function makeRSS(user, include_replies, tweets) {
-  var with_replies = '';
-  if (include_replies)
-    with_replies = '/with_replies';
-
+function makeRSS(user, tweets) {
   rss = '<?xml version="1.0" encoding="UTF-8"?>'
           + "\n\n"
           + '<rss xmlns:atom="http://www.w3.org/2005/Atom" xmlns:georss="http://www.georss.org/georss" xmlns:twitter="http://api.twitter.com" version="2.0">'
@@ -156,7 +143,6 @@ function makeRSS(user, include_replies, tweets) {
           + "</title>\n\t"
           + "<link>https://twitter.com/"
           + user
-          + with_replies
           + "</link>\n\t"
           + "<description>Twitter feed for: "
           + user
