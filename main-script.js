@@ -67,7 +67,8 @@ function tweetsFor(user, tweets_count) {
   // The Yahoo YQL API is limited at 2000 queries per hour per IP for public requests. Upping this to 20k request would require an account and authentification using OAuth.
   // See https://developer.yahoo.com/yql/guide/overview.html#usage-information-and-limits
   // As each request is for querying a Twitter feed the public limit should be ok for most private/single user usages.
-  var yqlQueryUrlPart = 'SELECT * FROM html WHERE url="' + twitterURL + '" AND xpath="//li[contains(@class, \'js-stream-item\')]"';
+  var yqlQueryUrlPart = 'use "store://khMqnFudV9aCgu92gxsnzn" as htmlbackagain; SELECT * FROM htmlbackagain WHERE url="'
+      + twitterURL + '" AND xpath="//li[contains(@class, \'js-stream-item\')]"';
   var yqlJSONQuery = 'http://query.yahooapis.com/v1/public/yql?format=json&diagnostics=true&q=' + encodeURIComponent(yqlQueryUrlPart);  
   
   var options = {
@@ -104,7 +105,7 @@ function tweetsFor(user, tweets_count) {
         Logger.log("The response 'meta' messages:\n" + JSON.stringify(data.query.meta));
     return;
   }
-  var jsonTweets = data.query.results;
+  var jsonTweets = data.query.results.htmlcontent;
 
   // NOTE: as we fetch again the site, we might get an updated site, i.e. other tweets.
   // However, as this is only used to find the right places to insert the links into the tweet text a missing tweet due to the timing differences is ok.
