@@ -377,6 +377,8 @@ function extractTweets(jsonTweets, xmlTweets) {
           // translate some escaped HTML entities to text which do not get translated back when parsing the XML for some reason, e.g. &#39;
           tweetHTML = tweetHTML.replace(/&amp;#39;/ig, "'");
           tweetText = tweetText.replace(/&amp;#39;/ig, "'");
+          tweetHTML = tweetHTML.replace(/&#39;/ig, "'");
+          tweetText = tweetText.replace(/&#39;/ig, "'");
         }
       }
       
